@@ -55,7 +55,6 @@ def test_node_scontrol():
 
 def test_node_update():
     """Node: Test node().update()."""
-
     time.sleep(3)
     test_node = pyslurm.node().ids()[-1]
     node_test_before = pyslurm.node().find_id(test_node)
