@@ -35,6 +35,12 @@ cdef extern from *:
     ctypedef char* const_char_ptr "const char*"
     ctypedef char** const_char_pptr "const char**"
 
+{% include 'slurm.h.pxd' %}
+
+{% include 'slurmdb.h.pxd' %}
+
+{% include 'slurm_errno.h.pxd' %}
+
 cdef inline stringOrNone(char* value, value2):
     if value is NULL:
         if value2 is '':
@@ -85,12 +91,6 @@ cdef inline int64orNone(uint64_t value):
         return value
 
 cdef extern char **environ
-
-{% include 'slurm.h.pxd' %}
-
-{% include 'slurmdb.h.pxd' %}
-
-{% include 'slurm_errno.h.pxd' %}
 
 cdef extern char *slurm_preempt_mode_string (uint16_t preempt_mode)
 cdef extern void slurm_make_time_str (time_t *time, char *string, int size)
