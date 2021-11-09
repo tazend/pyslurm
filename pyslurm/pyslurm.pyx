@@ -76,6 +76,12 @@ include "pydefines/slurmdb_enums.pxi"
 # Slurm Macros as Cython inline functions
 #
 
+cdef inline FREE_NULL_LIST(slurm.List _X):
+    if _X:
+        slurm.slurm_list_destroy(_X)
+
+    _X = NULL
+
 cdef inline SLURM_VERSION_NUMBER():
     return slurm.SLURM_VERSION_NUMBER
 
@@ -344,6 +350,123 @@ def slurm_load_slurmd_status():
     slurm.slurm_free_slurmd_status(slurmd_status)
 
     return Status
+
+import slurmctld
+import partition as part
+
+cdef class Config:
+
+    cdef:
+        slurm.slurm_conf_t *slurm_ctl_conf_ptr
+        slurm.time_t last_update
+        void *db_conn
+        slurm.List main_conf_list
+        slurm.List dbd_conf_list
+        public dict main
+        public dict cgroup
+        public dict acct_gather
+        public dict plugstack
+        public dict slurmdbd
+        public dict ext_sensor
+        public dict select
+        public dict node_features
+
+    def __cinit__(self):
+        self.slurm_ctl_conf_ptr = NULL
+        self.last_update = 0
+        self.db_conn = NULL
+        self.main_conf_list = NULL
+        self.dbd_conf_list = NULL
+        self.main = {}
+        self.cgroup = {}
+        self.acct_gather = {}
+        self.plugstack = {}
+        self.slurmdbd = {}
+        self.ext_sensor = {}
+        self.select = {}
+        self.node_features = {}
+
+        self.load()
+
+    cdef void __free_ctl_conf_ptr(self):
+        if self.slurm_ctl_conf_ptr is not NULL:
+            slurm.slurm_free_ctl_conf(self.slurm_ctl_conf_ptr)
+            self.slurm_ctl_conf_ptr = NULL
+
+    def show(self):
+        u"""Print slurm control configuration information."""
+        slurm.slurm_print_ctl_conf(slurm.stdout, self.slurm_ctl_conf_ptr)
+
+    def reconfigure(self):
+        pass
+
+    def load(self):
+        self.__load_dbd_conf()
+
+    def __load_dbd_conf(self):
+        cdef:
+            int slurm_errno = 0
+            int rc = slurm.SLURM_SUCCESS
+            uint16_t persist_conn_flags = 0
+
+        # Check if slurm is running with slurmdbd
+        if self.main["AccountingStorageType"] != "accounting_storage/slurmdbd":
+             return
+
+        # Create new connection if necessary
+        if self.db_conn is NULL:
+            self.db_conn = slurm.slurmdb_connection_get(&persist_conn_flags)
+
+            # Check if establishing connection was successful
+            rc, errstr = get_last_slurm_error()
+
+            if rc == slurm.SLURM_ERROR:
+                raise ValueError(errstr, rc)
+
+        # Fetch the slurmdbd config
+        self.dbd_conf_list = <slurm.List>slurm.slurmdb_config_get(self.db_conn)
+
+        # Parse config to dict
+        self.__conf_2_dict(self.slurmdbd, self.dbd_conf_list)
+
+    cdef int __conf_2_dict(self, dict conf, slurm.List conf_list) except? -1:
+        u"""Return slurm config as Dictionary.
+
+        :returns: Dictionary of slurm key-pair values
+        :rtype: `dict`
+        """
+        cdef:
+            slurm.ListIterator list_iter = NULL
+            config_key_pair_t *conf_key_pair = NULL
+            int list_count = 0
+            int i = 0
+            dict conf_dict = {}
+
+        list_count = slurm.slurm_list_count(conf_list)
+
+        if conf_list is not NULL and list_count:
+            list_iter = slurm.slurm_list_iterator_create(conf_list)
+
+            for i in range(list_count):
+
+                conf_key_pair = <config_key_pair_t *>slurm.slurm_list_next(list_iter)
+                name = conf_key_pair.name.decode()
+
+                if conf_key_pair.value is not NULL:
+                    value = conf_key_pair.value.decode()
+
+                    if value == "(null)":
+                        value = None
+                else:
+                    value = None
+
+                conf_dict[name] = value
+
+            slurm.slurm_list_iterator_destroy(list_iter)
+
+        FREE_NULL_LIST(conf_list)
+        conf.clear()
+        conf.update(conf_dict)
 
 
 #
