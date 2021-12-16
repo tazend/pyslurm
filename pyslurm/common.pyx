@@ -1,7 +1,8 @@
 # cython: c_string_type=unicode, c_string_encoding=utf8
 
-from grp import getgrgid
-from pwd import getpwuid
+from grp import getgrgid, getgrnam
+from pwd import getpwuid, getpwnam
+from os import getuid, getgid
 
 cdef int conf_list_2_dict(dict conf, slurm.List conf_list) except? -1:
     cdef:
@@ -92,6 +93,32 @@ def inf64(val):
     else:
         return val
 
+def to_uint16(val, inf=False, noval=slurm.NO_VAL16):
+    if not val or val == noval:
+        return slurm.NO_VAL16
+    elif inf and val == "unlimited":
+        return slurm.INFINITE16
+    else:
+        return val
+
+
+def to_uint32(val, inf=False, noval=slurm.NO_VAL):
+    if not val or val == noval:
+        return slurm.NO_VAL
+    elif inf and val == "unlimited":
+        return slurm.INFINITE
+    else:
+        return val
+
+
+def to_uint64(val, inf=False, noval=slurm.NO_VAL64):
+    if not val or val == noval:
+        return slurm.NO_VAL64
+    elif inf and val == "unlimited":
+        return slurm.INFINITE64
+    else:
+        return val
+
 
 cdef char *to_charptr(s):
     """Convert Unicode to char*"""
@@ -158,6 +185,40 @@ cdef charptr_2_list(char *vals, delim=","):
     return ret.split(delim)
 
 
+def time_str2secs(val):
+    cdef char *tmp = NULL
+    cdef uint32_t secs
+
+    if val == "unlimited":
+        return slurm.INFINITE
+
+    tmp = to_charptr(val)
+    # Will be NO_VAL if anything goes wrong
+    secs = slurm.slurm_time_str2secs(tmp)
+
+#    if val is not None and secs == slurm.NO_VAL:
+#        raise ValueError("Invalid Time Specification.")
+
+    return secs
+
+
+def time_str2mins(val):
+    cdef char *tmp = NULL
+    cdef uint32_t mins
+
+    if not val or val == "unlimited":
+        return slurm.INFINITE
+
+    tmp = to_charptr(val)
+    # Will be NO_VAL if anything goes wrong
+    mins = slurm.slurm_time_str2mins(tmp)
+
+#    if val is not None and mins == slurm.NO_VAL:
+#        raise ValueError("Invalid Time Specification.")
+
+    return mins
+
+
 def secs2time_str(val, default=None, noval=slurm.NO_VAL):
     """Parse Time in Seconds to SLURM Timestring Representation"""
     cdef char time_line[32]
@@ -192,6 +253,23 @@ def mins2time_str(val, default=None, noval=slurm.NO_VAL):
         return to_unicode(time_line)
     else:
         return "unlimited"
+
+
+def parse_time(val, on_noval=0):
+    cdef time_t tmp_time
+    cdef char* tmp_char = NULL
+
+    if not val:
+        # time_t of 0, so the option will be ignored by slurmctld
+        return on_noval
+
+    tmp_char = to_charptr(val)
+    tmp_time = slurm.slurm_parse_time(tmp_char, 0)
+
+    if not tmp_time:
+        raise ValueError("Invalid Time Specification.")
+
+    return tmp_time
 
 
 cdef make_time_str(time_t *time):
@@ -233,3 +311,19 @@ def gid2name(gid):
         return name
     except KeyError:
         return None
+
+
+def user2uid(user):
+    try:
+        uid = getpwnam(user).pw_uid
+        return uid
+    except KeyError:
+        return getuid()
+
+
+def group2gid(group):
+    try:
+        gid = getgrnam(group).gr_uid
+        return gid
+    except KeyError:
+        return getgid()
