@@ -270,7 +270,10 @@ def cythongen():
     cleanup_build()
 
     # Build all extensions
-    metadata["ext_modules"] = cythonize(make_extensions()) 
+    metadata["ext_modules"] = cythonize(make_extensions(), compiler_directives={
+        'embedsignature': False,
+        'binding': True
+    }) 
     
 
 def parse_setuppy_commands():
