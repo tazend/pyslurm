@@ -73,8 +73,10 @@ cdef extern from *:
     ctypedef struct slurm_ctl_conf_t
 
 
-# Header definitions combined from slurm.h, slurmdb.h and slurm_errno.h
-include "header.pxi"
+# Header definitions
+include "slurm_errno.h.pxi"
+include "slurm.h.pxi"
+include "slurmdb.h.pxi"
 
 # Any other definitions which are not directly in
 # the header files, but exported in libslurm.so
