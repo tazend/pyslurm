@@ -7,6 +7,7 @@ import logging
 import sys
 import textwrap
 import pathlib
+from pathlib import Path
 from setuptools import setup, Extension
 from distutils.dir_util import remove_tree
 from distutils.version import LooseVersion
@@ -19,8 +20,8 @@ CYTHON_VERSION_MIN = "0.29.30"
 
 SLURM_RELEASE = "23.2"
 PYSLURM_PATCH_RELEASE = "0"
-SLURM_SHARED_LIB = "libslurm.so"
-CURRENT_DIR = pathlib.Path(__file__).parent
+SLURM_SHARED_LIB = "libslurmfull"
+CURRENT_DIR = Path(__file__).parent
 
 metadata = dict(
     name="pyslurm",
@@ -58,9 +59,9 @@ class PySlurmConfig():
 
     def __init__(self):
         # Assume some defaults here
-        self.slurm_lib = "/usr/lib64"
-        self.slurm_inc = "/usr/include"
-        self.slurm_inc_full = "/usr/include/slurm"
+        self.slurm_lib = Path("/usr/lib64")
+        self.slurm_inc = Path("/usr/include")
+        self.slurm_inc_full = Path("/usr/include/slurm")
 
 config = PySlurmConfig()
 
@@ -140,7 +141,7 @@ def find_files_with_extension(path, extensions):
     Recursively find all files with specific extensions.
     """
     files = [p
-             for p in pathlib.Path(path).glob("**/*")
+             for p in Path(path).glob("**/*")
              if p.suffix in extensions]
 
     return files
@@ -175,10 +176,10 @@ def make_extensions():
     extensions = []
     pyx_files = find_files_with_extension("pyslurm", {".pyx"})
     ext_meta = { 
-        "include_dirs": [config.slurm_inc, "."],
-        "library_dirs": [config.slurm_lib],
-        "libraries": ["slurm"],
-        "runtime_library_dirs": [config.slurm_lib],
+        "include_dirs": [str(config.slurm_inc), "."],
+        "library_dirs": [str(config.slurm_lib)],
+        "libraries": [SLURM_SHARED_LIB[3:]],
+        "runtime_library_dirs": [str(config.slurm_lib)],
     }
 
     for pyx in pyx_files:
@@ -214,28 +215,35 @@ def parse_slurm_args():
         config.bgq = 1
 
     if slurm_lib:
-        config.slurm_lib = slurm_lib
+        config.slurm_lib = Path(slurm_lib)
     if slurm_inc:
-        config.slurm_inc = slurm_inc
-        config.slurm_inc_full = os.path.join(slurm_inc, "slurm")
+        config.slurm_inc = Path(slurm_inc)
+        config.slurm_inc_full = Path(slurm_inc).joinpath("slurm")
 
 
 def slurm_sanity_checks():
     """
     Check if Slurm headers and Lib exist.
     """
-    if os.path.exists(f"{config.slurm_lib}/{SLURM_SHARED_LIB}"):
-        info(f"Found Slurm shared library in {config.slurm_lib}")
-    else:
-        raise RuntimeError(f"Cannot locate Slurm shared library in {config.slurm_lib}")
+    libfile1 = config.slurm_lib.joinpath(f"{SLURM_SHARED_LIB}.so")
+    libfile2 = config.slurm_lib.joinpath(f"slurm/{SLURM_SHARED_LIB}.so")
+
+    if not libfile1.is_file():
+        if libfile2.is_file():
+            # Found it in the "slurm" subdirectory
+            config.slurm_lib = config.slurm_lib.joinpath("slurm")
+        else:
+            raise RuntimeError(f"Cannot locate Slurm shared library in {config.slurm_lib}")
+    info(f"Found Slurm shared library in {config.slurm_lib}")
     
-    if os.path.exists(f"{config.slurm_inc_full}/slurm.h"):
-        info(f"Found Slurm header in {config.slurm_inc_full}")
-    else:
-        raise RuntimeError(f"Cannot locate the Slurm include in {config.slurm_inc_full}")
+    slurm_h = config.slurm_inc_full.joinpath("slurm.h")
+    if not slurm_h.is_file():
+        raise RuntimeError(f"Cannot locate the slurm headers in {config.slurm_inc_full}")
+    info(f"Found Slurm header in {config.slurm_inc_full}")
 
     # Test for Slurm MAJOR.MINOR version match (ignoring .MICRO)
-    slurm_inc_ver = read_inc_version(f"{config.slurm_inc_full}/slurm_version.h")
+    slurm_version_h = config.slurm_inc_full.joinpath("slurm_version.h")
+    slurm_inc_ver = read_inc_version(slurm_version_h)
 
     major = (int(slurm_inc_ver, 16) >> 16) & 0xFF
     minor = (int(slurm_inc_ver, 16) >> 8) & 0xFF
