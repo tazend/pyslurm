@@ -19,7 +19,7 @@ CYTHON_VERSION_MIN = "0.29.30"
 
 SLURM_RELEASE = "23.2"
 PYSLURM_PATCH_RELEASE = "0"
-SLURM_SHARED_LIB = "libslurm.so"
+SLURM_SHARED_LIB = "libslurmfull"
 CURRENT_DIR = pathlib.Path(__file__).parent
 
 metadata = dict(
@@ -177,7 +177,7 @@ def make_extensions():
     ext_meta = { 
         "include_dirs": [config.slurm_inc, "."],
         "library_dirs": [config.slurm_lib],
-        "libraries": ["slurm"],
+        "libraries": [SLURM_SHARED_LIB[3:]],
         "runtime_library_dirs": [config.slurm_lib],
     }
 
@@ -214,7 +214,7 @@ def parse_slurm_args():
         config.bgq = 1
 
     if slurm_lib:
-        config.slurm_lib = slurm_lib
+        config.slurm_lib = os.path.join(slurm_lib, "slurm")
     if slurm_inc:
         config.slurm_inc = slurm_inc
         config.slurm_inc_full = os.path.join(slurm_inc, "slurm")
@@ -224,7 +224,7 @@ def slurm_sanity_checks():
     """
     Check if Slurm headers and Lib exist.
     """
-    if os.path.exists(f"{config.slurm_lib}/{SLURM_SHARED_LIB}"):
+    if os.path.exists(f"{config.slurm_lib}/{SLURM_SHARED_LIB}.so"):
         info(f"Found Slurm shared library in {config.slurm_lib}")
     else:
         raise RuntimeError(f"Cannot locate Slurm shared library in {config.slurm_lib}")
@@ -232,7 +232,7 @@ def slurm_sanity_checks():
     if os.path.exists(f"{config.slurm_inc_full}/slurm.h"):
         info(f"Found Slurm header in {config.slurm_inc_full}")
     else:
-        raise RuntimeError(f"Cannot locate the Slurm include in {config.slurm_inc_full}")
+        raise RuntimeError(f"Cannot locate the slurm headers in {config.slurm_inc_full}")
 
     # Test for Slurm MAJOR.MINOR version match (ignoring .MICRO)
     slurm_inc_ver = read_inc_version(f"{config.slurm_inc_full}/slurm_version.h")
