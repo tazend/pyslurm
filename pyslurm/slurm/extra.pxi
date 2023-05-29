@@ -250,6 +250,7 @@ cdef extern int slurm_addto_step_list(List step_list, char *names)
 cdef extern int slurmdb_report_set_start_end_time(time_t *start, time_t *end)
 cdef extern uint16_t slurm_get_track_wckey()
 cdef extern void slurm_sprint_cpu_bind_type(char *str, cpu_bind_type_t cpu_bind_type)
+cdef extern void slurm_accounting_enforce_string(uint16_t enforce, char *str, int str_len)
 
 # Slurm bit functions
 

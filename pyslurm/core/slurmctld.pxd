@@ -28,6 +28,7 @@ from pyslurm.slurm cimport (
     slurm_load_ctl_conf,
     slurm_free_ctl_conf,
     slurm_preempt_mode_string,
+    slurm_accounting_enforce_string,
     try_xmalloc,
 )
 from pyslurm.utils cimport cstr

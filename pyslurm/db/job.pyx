@@ -71,7 +71,7 @@ cdef class JobFilter:
         self.ptr = <slurmdb_job_cond_t*>try_xmalloc(sizeof(slurmdb_job_cond_t))
         if not self.ptr:
             raise MemoryError("xmalloc failed for slurmdb_job_cond_t")
-        
+
         self.ptr.db_flags = slurm.SLURMDB_JOB_FLAG_NOTSET
         self.ptr.flags |= slurm.JOBCOND_FLAG_NO_TRUNC
 
@@ -119,15 +119,15 @@ cdef class JobFilter:
     def _parse_state(self):
         # TODO: implement
         return None
-            
+
     def _create(self):
         self._alloc()
         cdef:
             slurmdb_job_cond_t *ptr = self.ptr
             slurm_selected_step_t *selected_step
 
-        ptr.usage_start = date_to_timestamp(self.start_time)  
-        ptr.usage_end = date_to_timestamp(self.end_time)  
+        ptr.usage_start = date_to_timestamp(self.start_time)
+        ptr.usage_end = date_to_timestamp(self.end_time)
         ptr.cpus_min = u32(self.cpus, on_noval=0)
         ptr.cpus_max = u32(self.max_cpus, on_noval=0)
         ptr.nodes_min = u32(self.nodes, on_noval=0)
@@ -153,7 +153,7 @@ cdef class JobFilter:
 
         if self.truncate_time:
             ptr.flags &= ~slurm.JOBCOND_FLAG_NO_TRUNC
-            
+
         if self.ids:
             # These are only allowed by the slurmdbd when specific jobs are
             # requested.
@@ -353,7 +353,7 @@ cdef class Jobs(MultiClusterMap):
             In its simplest form, you can do something like this:
 
             >>> import pyslurm
-            >>> 
+            >>>
             >>> db_filter = pyslurm.db.JobFilter(ids=[9999])
             >>> changes = pyslurm.db.Job(comment="A comment for the job")
             >>> modified_jobs = pyslurm.db.Jobs.modify(db_filter, changes)
@@ -366,7 +366,7 @@ cdef class Jobs(MultiClusterMap):
             connection object:
 
             >>> import pyslurm
-            >>> 
+            >>>
             >>> db_conn = pyslurm.db.Connection.open()
             >>> db_filter = pyslurm.db.JobFilter(ids=[9999])
             >>> changes = pyslurm.db.Job(comment="A comment for the job")
@@ -433,7 +433,7 @@ cdef class Jobs(MultiClusterMap):
         else:
             # Autodetects the last slurm error
             raise RPCError()
-        
+
         if not db_connection:
             # Autocommit if no connection was explicitly specified.
             conn.commit()
@@ -528,7 +528,7 @@ cdef class Job:
             SlurmList step_list
             SlurmListItem step_ptr
 
-        step_list = SlurmList.wrap(self.ptr.steps, owned=False) 
+        step_list = SlurmList.wrap(self.ptr.steps, owned=False)
         for step_ptr in SlurmList.iter_and_pop(step_list):
             step = JobStep.from_ptr(<slurmdb_step_rec_t*>step_ptr.data)
             self.steps[step.id] = step
@@ -593,7 +593,7 @@ cdef class Job:
 
     @property
     def num_nodes(self):
-        val = TrackableResources.find_count_in_str(self.ptr.tres_alloc_str, 
+        val = TrackableResources.find_count_in_str(self.ptr.tres_alloc_str,
                                                    slurm.TRES_NODE)
         if val is not None:
             # Job is already running and has nodes allocated
@@ -601,7 +601,7 @@ cdef class Job:
         else:
             # Job is still pending, so we return the number of requested nodes
             # instead.
-            val = TrackableResources.find_count_in_str(self.ptr.tres_req_str, 
+            val = TrackableResources.find_count_in_str(self.ptr.tres_req_str,
                                                        slurm.TRES_NODE)
             return val
 
@@ -622,7 +622,7 @@ cdef class Job:
         task_str = cstr.to_unicode(self.ptr.array_task_str)
         if not task_str:
             return None
-        
+
         if "%" in task_str:
             # We don't want this % character and everything after it
             # in here, so remove it.
@@ -730,7 +730,7 @@ cdef class Job:
         return cstr.to_unicode(self.ptr.jobname)
 
     # uint32_t lft
-    
+
     @property
     def mcs_label(self):
         return cstr.to_unicode(self.ptr.mcs_label)
@@ -757,7 +757,7 @@ cdef class Job:
 
     @property
     def cpus(self):
-        val = TrackableResources.find_count_in_str(self.ptr.tres_alloc_str, 
+        val = TrackableResources.find_count_in_str(self.ptr.tres_alloc_str,
                                                    slurm.TRES_CPU)
         if val is not None:
             # Job is already running and has cpus allocated
@@ -769,7 +769,7 @@ cdef class Job:
 
     @property
     def memory(self):
-        val = TrackableResources.find_count_in_str(self.ptr.tres_req_str, 
+        val = TrackableResources.find_count_in_str(self.ptr.tres_req_str,
                                                    slurm.TRES_MEM)
         return val
 
