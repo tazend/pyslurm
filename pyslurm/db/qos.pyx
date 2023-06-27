@@ -181,7 +181,6 @@ cdef class QualityOfService:
     def _as_dict(self, recursive=False):
         return instance_to_dict(self)
 
-
     @staticmethod
     def load(name):
         """Load the information for a specific Quality of Service.
