@@ -39,7 +39,7 @@ def test_search_filter():
         qos_filter._create()
 
 
-def test_create_collection_instance():
+def test_create_collection():
     # TODO
     assert True
 

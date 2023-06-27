@@ -44,9 +44,9 @@ cdef class Associations(list):
 
         Args:
             recursive (bool, optional):
-                By default, the objects will not be converted to a dict. If
-                this is set to `True`, then additionally all objects are
-                converted to dicts.
+                By default, custom classes will not be further converted to a
+                dict. If this is set to `True`, then additionally all other
+                objects are recursively converted to dicts.
             group_by_cluster (bool, optional):
                 By default, only the Jobs from your local Cluster are
                 returned. If this is set to `True`, then all the Jobs in the
@@ -238,7 +238,10 @@ cdef class Association:
         Returns:
             (dict): Database Association information as dict
         """
-        return instance_to_dict(self)
+        return self._as_dict()
+
+    def _as_dict(self, recursive=False):
+        return self.instance_to_dict(self)
 
     def __eq__(self, other):
         if isinstance(other, Association):

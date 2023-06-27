@@ -151,7 +151,14 @@ cdef class JobFilter:
 
 
 cdef class Jobs(list):
-    """A collection of [pyslurm.db.Job][] objects."""
+    """A List of [pyslurm.db.Job][] objects.
+
+    Args:
+        jobs (Union[list[int], list[pyslurm.db.Job], str], optional=None):
+            Jobs to initialize this collection with. This can be a list of
+            Job IDs or [pyslurm.db.Job][] objects. You can also specify a
+            comma-seperated string of Job IDs.
+    """
     pass
 
 
@@ -161,6 +168,8 @@ cdef class Job:
     Args:
         job_id (int, optional=0):
             An Integer representing a Job-ID.
+        cluster (str, optional=None):
+            Name of the cluster. Default is the local Cluster.
 
     Other Parameters:
         admin_comment (str):

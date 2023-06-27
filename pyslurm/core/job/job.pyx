@@ -204,7 +204,7 @@ cdef class Jobs(list):
             Pending Jobs will be ignored, since they don't have any Steps yet.
 
         Raises:
-            RPCError: When retrieving the Job information for all the Steps
+            RPCError: When retrieving the information for all the Steps
                 failed.
         """
         cdef dict steps = JobSteps.load().as_dict()
@@ -339,13 +339,26 @@ cdef class Job:
             dst.ptr = src.ptr
             src.ptr = tmp
 
-    def as_dict(self):
+    def as_dict(self, recursive=False):
         """Job information formatted as a dictionary.
+
+        Args:
+            recursive (bool, optional):
+                By default, custom classes will not be further converted to a
+                dict. If this is set to `True`, then additionally all other
+                objects are recursively converted to dicts.
 
         Returns:
             (dict): Job information as dict
         """
-        return instance_to_dict(self)
+        return self._as_dict(recursive=recursive)
+
+    def _as_dict(self, recursive=False):
+        cdef dict out = instance_to_dict(self)
+        if recursive:
+            out["steps"] = self.steps.as_dict(recursive=True)
+
+        return out
 
     def send_signal(self, signal, steps="children", hurry=False):
         """Send a signal to a running Job.
@@ -355,17 +368,17 @@ cdef class Job:
         Args:
             signal (Union[str, int]): 
                 Any valid signal which will be sent to the Job. Can be either
-                a str like 'SIGUSR1', or simply an int.
+                a str like `SIGUSR1`, or simply an int.
             steps (str):
                 Selects which steps should be signaled. Valid values for this
-                are: "all", "batch" and "children". The default value is
-                "children", where all steps except the batch-step will be
+                are: `all`, `batch` and `children`. The default value is
+                `children`, where all steps except the batch-step will be
                 signaled.
-                The value "batch" in contrast means, that only the batch-step
-                will be signaled. With "all" every step is signaled.
+                The value `batch` in contrast means, that only the batch-step
+                will be signaled. With `all` every step is signaled.
             hurry (bool): 
-                If True, no burst buffer data will be staged out. The default
-                value is False.
+                If `True`, no burst buffer data will be staged out. The
+                default value is `False`.
 
         Raises:
             RPCError: When sending the signal was not successful.
@@ -474,15 +487,15 @@ cdef class Job:
         changes.ptr.job_id = self.id
         verify_rpc(slurm_update_job(changes.ptr))
 
-    def hold(self, mode=None):
+    def hold(self, mode="admin"):
         """Hold a currently pending Job, preventing it from being scheduled.
 
         Args:
             mode (str):
                 Determines in which mode the Job should be held. Possible
-                values are "user" or "admin". By default, the Job is held in
-                "admin" mode, meaning only an Administrator will be able to
-                release the Job again. If you specify the mode as "user", the
+                values are `user` or `admin`. By default, the Job is held in
+                `admin` mode, meaning only an Administrator will be able to
+                release the Job again. If you specify the mode as `user`, the
                 User will also be able to release the job.
 
         Raises:
@@ -522,9 +535,9 @@ cdef class Job:
         Implements the slurm_requeue RPC.
 
         Args:
-            hold (bool, optional):
+            hold (bool):
                 Controls whether the Job should be put in a held state or not.
-                Default for this is 'False', so it will not be held.
+                Default for this is `False`, so it will not be held.
 
         Raises:
             RPCError: When requeing the Job was not successful.

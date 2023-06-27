@@ -58,11 +58,13 @@ from pyslurm.utils.uint cimport *
 
 
 cdef class Nodes(list):
-    """A collection of [pyslurm.Node][] objects.
+    """A List of [pyslurm.Node][] objects.
 
     Args:
-        nodes (Union[list, dict, str], optional=None):
-            Nodes to initialize this collection with.
+        nodes (Union[list[str], list[pyslurm.Node], str], optional=None):
+            Nodes to initialize this collection with. This can be a list of
+            node-names or [pyslurm.Node][] objects. You can also specify a
+            comma-seperated String of node-names.
 
     Attributes:
         free_memory (int):
@@ -83,9 +85,6 @@ cdef class Nodes(list):
             Total amount of Watts consumed in this node collection.
         avg_watts (int):
             Amount of average watts consumed in this node collection.
-
-    Raises:
-        MemoryError: If malloc fails to allocate memory.
     """
     cdef:
         node_info_msg_t *info
@@ -223,9 +222,6 @@ cdef class Node:
             CPU Load on the Node.
         slurmd_port (int):
             Port the slurmd is listening on the node.
-
-    Raises:
-        MemoryError: If malloc fails to allocate memory.
     """
     cdef:
         node_info_t *info

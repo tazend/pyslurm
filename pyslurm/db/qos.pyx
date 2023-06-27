@@ -37,9 +37,9 @@ cdef class QualitiesOfService(list):
 
         Args:
             recursive (bool, optional):
-                By default, the objects will not be converted to a dict. If
-                this is set to `True`, then additionally all objects are
-                converted to dicts.
+                By default, custom classes will not be further converted to a
+                dict. If this is set to `True`, then additionally all other
+                objects are recursively converted to dicts.
             name_is_key (bool, optional):
                 By default, the keys in this dict are the names of each QoS.
                 If this is set to `False`, then the unique ID of the QoS will
@@ -176,7 +176,11 @@ cdef class QualityOfService:
         Returns:
             (dict): Database QualityOfService information as dict
         """
+        return self._as_dict()
+
+    def _as_dict(self, recursive=False):
         return instance_to_dict(self)
+
 
     @staticmethod
     def load(name):

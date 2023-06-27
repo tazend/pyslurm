@@ -211,9 +211,9 @@ cdef class Jobs(list):
 
         Args:
             recursive (bool, optional):
-                By default, the objects will not be converted to a dict. If
-                this is set to `True`, then additionally all objects are
-                converted to dicts.
+                By default, custom classes will not be further converted to a
+                dict. If this is set to `True`, then additionally all other
+                objects are recursively converted to dicts.
             group_by_cluster (bool, optional):
                 By default, only the Jobs from your local Cluster are
                 returned. If this is set to `True`, then all the Jobs in the
@@ -447,6 +447,9 @@ cdef class Job:
     def __init__(self, job_id=0, cluster=LOCAL_CLUSTER, **kwargs):
         self._alloc_impl()
         self.ptr.jobid = int(job_id)
+        self.qos_data = {}
+        self.steps = JobSteps.__new__(JobSteps)
+        self.stats = JobStatistics()
         cstr.fmalloc(&self.ptr.cluster, cluster)
         for k, v in kwargs.items():
             setattr(self, k, v)
@@ -468,15 +471,25 @@ cdef class Job:
         wrap.ptr = in_ptr
         wrap.steps = JobSteps.__new__(JobSteps)
         wrap.stats = JobStatistics()
+        wrap.qos_data = {}
         return wrap
 
     @staticmethod
-    def load(job_id, cluster=LOCAL_CLUSTER, with_script=False, with_env=False):
+    def load(job_id, cluster=None, with_script=False, with_env=False):
         """Load the information for a specific Job from the Database.
 
         Args:
             job_id (int):
                 ID of the Job to be loaded.
+            cluster (str):
+                Name of the cluster to look for this Job. If nothing is
+                specified, the Job will be looked up on the local Cluster.
+            with_script (bool):
+                Whether the original batch-script should also be fetched from
+                the database. This is mutually exclusive with `with_env`.
+            with_env (bool):
+                Whether the environment variables should also be fetched from
+                the database. This is mutually exclusive with `with_script`.
 
         Returns:
             (pyslurm.db.Job): Returns a new Database Job instance
@@ -498,7 +511,8 @@ cdef class Job:
             >>> print(db_job.script)
 
         """
-        jfilter = JobFilter(ids=[int(job_id)], clusters=[cluster],
+        _cluster = LOCAL_CLUSTER if not cluster else cluster
+        jfilter = JobFilter(ids=[int(job_id)], clusters=[_cluster],
                             with_script=with_script, with_env=with_env)
         jobs = Jobs.load(jfilter)
         if not jobs:
@@ -517,10 +531,17 @@ cdef class Job:
         step_list = SlurmList.wrap(self.ptr.steps, owned=False) 
         for step_ptr in SlurmList.iter_and_pop(step_list):
             step = JobStep.from_ptr(<slurmdb_step_rec_t*>step_ptr.data)
-            self.steps[step.id] = step
+            step.cluster = self.cluster
+            self.steps.append(step)
 
-    def as_dict(self):
+    def as_dict(self, recursive=False):
         """Database Job information formatted as a dictionary.
+
+        Args:
+            recursive (bool, optional):
+                By default, the objects will not be converted to a dict. If
+                this is set to `True`, then additionally all objects are
+                converted to dicts.
 
         Returns:
             (dict): Database Job information as dict
@@ -530,15 +551,19 @@ cdef class Job:
             >>> myjob = pyslurm.db.Job.load(10000)
             >>> myjob_dict = myjob.as_dict()
         """
+        return self._as_dict(recursive=recursive)
+
+    def _as_dict(self, recursive=False):
         cdef dict out = instance_to_dict(self)
 
-        if self.stats:
-            out["stats"] = self.stats.as_dict()
+        if recursive: 
+            if self.stats:
+                out["stats"] = self.stats._as_dict()
 
-        steps = out.pop("steps", {})
-        out["steps"] = {}
-        for step_id, step in steps.items():
-            out["steps"][step_id] = step.as_dict() 
+            steps = out.pop("steps", [])
+            out["steps"] = {}
+            for step in steps:
+                out["steps"][step.id] = step._as_dict(recursive=True) 
 
         return out
 

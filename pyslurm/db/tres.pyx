@@ -144,9 +144,9 @@ cdef class TrackableResources(list):
 
         Args:
             recursive (bool, optional):
-                By default, the objects will not be converted to a dict. If
-                this is set to `True`, then additionally all objects are
-                converted to dicts.
+                By default, custom classes will not be further converted to a
+                dict. If this is set to `True`, then additionally all other
+                objects are recursively converted to dicts.
             name_is_key (bool, optional):
                 By default, the keys in this dict are the names of each TRES.
                 If this is set to `False`, then the unique ID of the TRES will
@@ -247,6 +247,14 @@ cdef class TrackableResource:
         return wrap
 
     def as_dict(self):
+        """TRES formatted as a dictionary.
+
+        Returns:
+            (dict): TRES information as dict
+        """
+        return self._as_dict()
+
+    def _as_dict(self, recursive=False):
         return instance_to_dict(self)
 
     @property

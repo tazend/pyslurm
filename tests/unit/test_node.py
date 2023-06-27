@@ -69,6 +69,20 @@ def test_set_node_state():
     assert _node_state_from_str("POWER_DOWN")
 
 
+def test_collection_to_dict():
+    nodes = pyslurm.Nodes("node1,node2")
+
+    nodes_dict = nodes.as_dict()
+    assert nodes_dict
+    assert isinstance(nodes_dict, dict)
+    assert "node1" in nodes_dict
+
+    nodes_dict = nodes.as_dict(recursive=True)
+    assert nodes_dict
+    assert isinstance(nodes_dict, dict)
+    assert "node1" in nodes_dict
+
+
 def test_setting_attributes():
     # TODO
     assert True

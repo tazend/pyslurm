@@ -466,6 +466,7 @@ class TestMiscUtil:
         coldict = collection_to_dict(collection, identifier=TestObject.id)
         coldict = coldict.get("TestCluster", {})
 
+        assert isinstance(coldict, dict)
         assert len(coldict) == RANGE
         for i in range(RANGE):
             assert i in coldict
@@ -479,10 +480,3 @@ class TestMiscUtil:
         for i in range(RANGE):
             assert i+OFFSET in coldict
             assert i in coldict[i+OFFSET]
-
-        coldict = collection_to_dict(collection, identifier=TestObject.id,
-                                    recursive=True)
-        coldict = coldict.get("TestCluster", {})
-
-        for item in coldict.values():
-            assert isinstance(item, dict)

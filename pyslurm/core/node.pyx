@@ -107,7 +107,6 @@ cdef class Nodes(list):
 
         Raises:
             RPCError: When getting all the Nodes from the slurmctld failed.
-            MemoryError: If malloc fails to allocate memory.
         """
         cdef:
             dict passwd = {}
@@ -325,7 +324,6 @@ cdef class Node:
         Raises:
             RPCError: If requesting the Node information from the slurmctld
                 was not successful.
-            MemoryError: If malloc failed to allocate memory.
 
         Examples:
             >>> import pyslurm
@@ -373,7 +371,6 @@ cdef class Node:
 
         Raises:
             RPCError: If creating the Node was not successful.
-            MemoryError: If malloc failed to allocate memory.
 
         Examples:
             >>> import pyslurm
@@ -424,7 +421,6 @@ cdef class Node:
 
         Raises:
             RPCError: If deleting the Node was not successful.
-            MemoryError: If malloc failed to allocate memory.
 
         Examples:
             >>> import pyslurm
@@ -444,6 +440,9 @@ cdef class Node:
             >>> mynode = pyslurm.Node.load("mynode")
             >>> mynode_dict = mynode.as_dict()
         """
+        return self._as_dict()
+
+    def _as_dict(self, recursive=False):
         return instance_to_dict(self)
 
     @property

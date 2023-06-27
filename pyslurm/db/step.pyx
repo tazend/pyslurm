@@ -33,8 +33,28 @@ from pyslurm.utils.helpers import (
     instance_to_dict,
     _get_exit_code,
     humanize_step_id,
+    collection_to_dict,
 )
 from pyslurm.core.job.util import cpu_freq_int_to_str
+
+
+cdef class JobSteps(list):
+
+    def as_dict(self, recursive=False):
+        """Convert the collection data to a dict.
+
+        Args:
+            recursive (bool, optional):
+                By default, the objects will not be converted to a dict. If
+                this is set to `True`, then additionally all objects are
+                converted to dicts.
+
+        Returns:
+            (dict): Collection as a dict.
+        """
+        col = collection_to_dict(self, identifier=JobStep.id,
+                                 recursive=recursive)
+        return col.get(list(col)[0], {})
 
 
 cdef class JobStep:
@@ -57,9 +77,25 @@ cdef class JobStep:
         wrap.stats = JobStatistics.from_step(wrap)
         return wrap
 
-    def as_dict(self):
+    def as_dict(self, recursive=False):
+        """JobStep information formatted as a dictionary.
+
+        Args:
+            recursive (bool, optional):
+                By default, the objects will not be converted to a dict. If
+                this is set to `True`, then additionally all objects are
+                recursively converted to dicts.
+
+        Returns:
+            (dict): JobStep information as dict
+        """
+        return self._as_dict(recursive=recursive)
+
+    def _as_dict(self, recursive=False):
         cdef dict out = instance_to_dict(self)
-        out["stats"] = self.stats.as_dict()
+        if recursive:
+            out["stats"] = self.stats.as_dict()
+
         return out
 
     @property

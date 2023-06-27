@@ -74,6 +74,18 @@ def test_create_collection():
     assert True
 
 
+def test_collection_to_dict():
+    jobs = pyslurm.db.Jobs("101,102")
+
+    jobs_dict = jobs.as_dict()
+    assert jobs_dict
+    assert isinstance(jobs_dict, dict)
+
+    jobs_dict = jobs.as_dict(recursive=True)
+    assert jobs_dict
+    assert isinstance(jobs_dict, dict)
+
+
 def test_create_instance():
     job = pyslurm.db.Job(9999)
     assert job.id == 9999

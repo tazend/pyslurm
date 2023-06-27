@@ -96,3 +96,17 @@ def test_parse_job_defaults():
     part.default_memory_per_gpu = None
     assert part.default_cpus_per_gpu is None
     assert part.default_memory_per_gpu is None
+
+
+def test_collection_to_dict():
+    partition = pyslurm.Partitions("part1,part2")
+
+    partition_dict = partition.as_dict()
+    assert partition_dict
+    assert isinstance(partition_dict, dict)
+    assert "part1" in partition_dict
+
+    partition_dict = partition.as_dict(recursive=True)
+    assert partition_dict
+    assert isinstance(partition_dict, dict)
+    assert "part1" in partition_dict

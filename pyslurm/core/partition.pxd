@@ -59,11 +59,13 @@ from pyslurm.core cimport slurmctld
 
 
 cdef class Partitions(list):
-    """A collection of [pyslurm.Partition][] objects.
+    """A List of [pyslurm.Partition][] objects.
 
     Args:
-        partitions (Union[list[str], dict[str, Partition], str], optional=None):
-            Partitions to initialize this collection with.
+        partitions (Union[list[str], list[pyslurm.Partition], str], optional=None):
+            Partitions to initialize this collection with. This can be a list
+            of Partition names or [pyslurm.Partition][] objects. You can also
+            specify a comma-seperated string of Partition names.
 
     Attributes:
         total_cpus (int):

@@ -48,6 +48,14 @@ cdef class JobStatistics:
         self.min_cpu_time_task = None
 
     def as_dict(self):
+        """Job Statistics formatted as a dictionary.
+
+        Returns:
+            (dict): Job Statistics information as dict
+        """
+        return self._as_dict()
+
+    def _as_dict(self, recursive=False):
         return instance_to_dict(self)
 
     @staticmethod
@@ -146,7 +154,7 @@ cdef class JobStatistics:
             JobStatistics job_stats = job.stats
             JobStatistics step_stats = None
 
-        for step in steps.values():
+        for step in steps:
             step_stats = step.stats
 
             job_stats.consumed_energy += step_stats.consumed_energy

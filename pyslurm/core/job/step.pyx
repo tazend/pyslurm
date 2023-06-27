@@ -65,9 +65,9 @@ cdef class JobSteps(list):
 
         Args:
             recursive (bool, optional):
-                By default, the objects will not be converted to a dict. If
-                this is set to `True`, then additionally all objects are
-                converted to dicts.
+                By default, custom classes will not be further converted to a
+                dict. If this is set to `True`, then additionally all other
+                objects are recursively converted to dicts.
 
         Returns:
             (dict): Collection as a dict.
@@ -89,10 +89,14 @@ cdef class JobSteps(list):
 
         Args:
             job_id (Union[Job, int]):
-                The Job for which the Steps should be loaded.
+                The Job for which the Steps should be loaded. If nothing is
+                specified, all Steps from all Jobs will be loaded.
 
         Returns:
             (pyslurm.JobSteps): JobSteps of the Job
+
+        Raises:
+            RPCError: When loading the Steps was not successful.
         """
         cdef:
             Job job
@@ -221,7 +225,6 @@ cdef class JobStep:
         Raises:
             RPCError: When retrieving Step information from the slurmctld was
                 not successful.
-            MemoryError: If malloc failed to allocate memory.
 
         Examples:
             >>> import pyslurm
@@ -325,12 +328,15 @@ cdef class JobStep:
         js.umsg.job_id = self.ptr.step_id.job_id
         verify_rpc(slurm_update_step(js.umsg))
 
-    def as_dict(self):
+    def as_dict(self, recursive=False):
         """JobStep information formatted as a dictionary.
 
         Returns:
             (dict): JobStep information as dict
         """
+        return self._as_dict()
+
+    def _as_dict(self, recursive=False):
         return instance_to_dict(self)
 
     @property

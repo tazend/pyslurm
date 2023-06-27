@@ -350,7 +350,7 @@ def collection_to_dict(collection, identifier, recursive=False, group_id=None):
             out[cluster] = {}
 
         _id = identifier.__get__(item)
-        data = item if not recursive else item.as_dict()
+        data = item if not recursive else item._as_dict(recursive=True)
 
         if group_id:
             grp_id = group_id.__get__(item)
@@ -367,7 +367,7 @@ def collection_to_dict_global(collection, identifier, recursive=False):
     cdef dict out = {}
     for item in collection:
         _id = identifier.__get__(item)
-        out[_id] = item if not recursive else item.as_dict()
+        out[_id] = item if not recursive else item._as_dict(recursive=True)
     return out
 
 

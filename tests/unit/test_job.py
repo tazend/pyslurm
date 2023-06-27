@@ -72,3 +72,47 @@ def test_power_type_int_to_list():
 def test_cpu_freq_int_to_str():
     expected = None
     assert cpu_freq_int_to_str(0) == expected
+
+
+def test_create_collection():
+    jobs = pyslurm.Jobs("101,102")
+    assert len(jobs) == 2
+    jobs = jobs.as_dict()
+    assert 101 in jobs
+    assert 102 in jobs
+    assert jobs[101].id == 101
+    assert jobs[102].id == 102
+
+    jobs = pyslurm.Jobs([101, 102])
+    assert len(jobs) == 2
+    jobs = jobs.as_dict()
+    assert 101 in jobs
+    assert 102 in jobs
+    assert jobs[101].id == 101
+    assert jobs[102].id == 102
+    
+    jobs = pyslurm.Jobs(
+        {
+            101: pyslurm.Job(101),
+            102: pyslurm.Job(102),
+        }
+    )
+    assert len(jobs) == 2
+    jobs = jobs.as_dict()
+    assert 101 in jobs
+    assert 102 in jobs
+    assert jobs[101].id == 101
+    assert jobs[102].id == 102
+    assert True
+
+
+def test_collection_to_dict():
+    jobs = pyslurm.Jobs("101,102")
+
+    jobs_dict = jobs.as_dict()
+    assert jobs_dict
+    assert isinstance(jobs_dict, dict)
+
+    jobs_dict = jobs.as_dict(recursive=True)
+    assert jobs_dict
+    assert isinstance(jobs_dict, dict)

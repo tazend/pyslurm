@@ -68,11 +68,13 @@ from pyslurm.slurm cimport (
 
 
 cdef class Jobs(list):
-    """A collection of [pyslurm.Job][] objects.
+    """A List of [pyslurm.Job][] objects.
 
     Args:
-        jobs (Union[list, dict], optional=None):
-            Jobs to initialize this collection with.
+        jobs (Union[list[int], list[pyslurm.Job], str], optional=None):
+            Jobs to initialize this collection with. This can be a list of
+            Job IDs or [pyslurm.Job][] objects. You can also specify a
+            comma-seperated String of job ids.
         frozen (bool, optional=False):
             Control whether this collection is "frozen" when reloading Job
             information.
@@ -114,9 +116,6 @@ cdef class Job:
     Args:
         job_id (int):
             An Integer representing a Job-ID.
-
-    Raises:
-        MemoryError: If malloc fails to allocate memory.
 
     Attributes:
         steps (JobSteps):

@@ -253,6 +253,9 @@ cdef class Partition:
             >>> mypart = pyslurm.Partition.load("mypart")
             >>> mypart_dict = mypart.as_dict()
         """
+        return self._as_dict()
+
+    def _as_dict(self, recursive=False):
         return instance_to_dict(self)
 
     @staticmethod

@@ -43,8 +43,8 @@ from pyslurm.db.stats cimport JobStatistics
 from pyslurm.db.tres cimport TrackableResources, TrackableResource
 
 
-cdef class JobSteps(dict):
-    """A collection of [pyslurm.db.JobStep][] objects"""
+cdef class JobSteps(list):
+    """A List of [pyslurm.db.JobStep][] objects"""
     pass
 
 
@@ -97,6 +97,7 @@ cdef class JobStep:
     """
     cdef slurmdb_step_rec_t *ptr
     cdef public JobStatistics stats
+    cdef readonly cluster
 
     @staticmethod
     cdef JobStep from_ptr(slurmdb_step_rec_t *step)
