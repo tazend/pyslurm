@@ -1146,18 +1146,91 @@ def _log_fmt_int_to_str(flag):
 
 
 def _priority_flags_int_to_list(flags):
-    # TODO
-    return []
+    out = []
+
+    if flags & slurm.PRIORITY_FLAGS_ACCRUE_ALWAYS:
+        out.append("ACCRUE_ALWAYS")
+
+    if flags & slurm.PRIORITY_FLAGS_CALCULATE_RUNNING:
+        out.append("CALCULATE_RUNNING")
+
+    if flags & slurm.PRIORITY_FLAGS_DEPTH_OBLIVIOUS:
+        out.append("DEPTH_OBLIVIOUS")
+
+    if flags & slurm.PRIORITY_FLAGS_FAIR_TREE:
+        out.append("NO_FAIR_TREE")
+
+    if flags & slurm.PRIORITY_FLAGS_INCR_ONLY:
+        out.append("INCR_ONLY")
+
+    if flags & slurm.PRIORITY_FLAGS_MAX_TRES:
+        out.append("MAX_TRES")
+
+    if flags & slurm.PRIORITY_FLAGS_NO_NORMAL_ASSOC:
+        out.append("NO_NORMAL_ASSOC")
+
+    if flags & slurm.PRIORITY_FLAGS_NO_NORMAL_PART:
+        out.append("NO_NORMAL_PART")
+
+    if flags & slurm.PRIORITY_FLAGS_NO_NORMAL_QOS:
+        out.append("NO_NORMAL_QOS")
+
+    if flags & slurm.PRIORITY_FLAGS_NO_NORMAL_TRES:
+        out.append("NO_NORMAL_TRES")
+
+    if flags & slurm.PRIORITY_FLAGS_SIZE_RELATIVE:
+        out.append("SMALL_RELATIVE_TO_TIME")
+
+    return out
 
 
-def _priority_reset_int_to_str(flags):
-    # TODO
-    return None
+def _priority_reset_int_to_str(flag):
+    if flag == slurm.PRIORITY_RESET_NONE:
+        return "NONE"
+    elif flag == slurm.PRIORITY_RESET_NOW:
+        return "NOW"
+    elif flag == slurm.PRIORITY_RESET_DAILY:
+        return "DAILY"
+    elif flag == slurm.PRIORITY_RESET_WEEKLY:
+        return "WEEKLY"
+    elif flag == slurm.PRIORITY_RESET_MONTHLY:
+        return "MONTHLY"
+    elif flag == slurm.PRIORITY_RESET_QUARTERLY:
+        return "QUARTERLY"
+    elif flag == slurm.PRIORITY_RESET_YEARLY:
+        return "YEARLY"
+    else:
+        return None
 
 
 def _private_data_int_to_list(flags):
-    # TODO
-    return []
+    out = []
+
+    if flags & slurm.PRIVATE_DATA_ACCOUNTS:
+        out.append("accounts")
+
+    if flags & slurm.PRIVATE_DATA_EVENTS:
+        out.append("events")
+
+    if flags & slurm.PRIVATE_DATA_JOBS:
+        out.append("jobs")
+
+    if flags & slurm.PRIVATE_DATA_NODES:
+        out.append("nodes")
+
+    if flags & slurm.PRIVATE_DATA_PARTITIONS:
+        out.append("partitions")
+
+    if flags & slurm.PRIVATE_DATA_RESERVATIONS:
+        out.append("reservations")
+
+    if flags & slurm.PRIVATE_DATA_USAGE:
+        out.append("usage")
+
+    if flags & slurm.PRIVATE_DATA_USERS:
+        out.append("users")
+
+    return out
 
 
 def _prolog_flags_int_to_list(flags):
