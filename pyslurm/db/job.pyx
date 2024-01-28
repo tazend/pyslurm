@@ -24,7 +24,6 @@
 
 from typing import Union, Any
 from pyslurm.core.error import RPCError, PyslurmError
-from pyslurm.core import slurmctld
 from typing import Any
 from pyslurm.utils.uint import *
 from pyslurm.settings import LOCAL_CLUSTER

@@ -31,6 +31,7 @@ from pyslurm.core.error import RPCError, verify_rpc
 from pyslurm.utils.ctime import timestamp_to_date, _raw_time
 from pyslurm.constants import UNLIMITED
 from pyslurm.settings import LOCAL_CLUSTER
+from pyslurm.core import slurmctld
 from pyslurm import xcollections
 from pyslurm.utils.helpers import (
     uid_to_name,
@@ -387,7 +388,7 @@ cdef class Partition:
 
     @property
     def default_memory_per_cpu(self):
-        return _get_memory(self.ptr.def_mem_per_cpu, per_cpu=True)
+        return slurmctld._get_memory(self.ptr.def_mem_per_cpu, per_cpu=True)
 
     @default_memory_per_cpu.setter
     def default_memory_per_cpu(self, val):
@@ -396,7 +397,7 @@ cdef class Partition:
 
     @property
     def default_memory_per_node(self):
-        return _get_memory(self.ptr.def_mem_per_cpu, per_cpu=False)
+        return slurmctld._get_memory(self.ptr.def_mem_per_cpu, per_cpu=False)
 
     @default_memory_per_node.setter
     def default_memory_per_node(self, val):
@@ -404,7 +405,7 @@ cdef class Partition:
 
     @property
     def max_memory_per_cpu(self):
-        return _get_memory(self.ptr.max_mem_per_cpu, per_cpu=True)
+        return slurmctld._get_memory(self.ptr.max_mem_per_cpu, per_cpu=True)
 
     @max_memory_per_cpu.setter
     def max_memory_per_cpu(self, val):
@@ -413,7 +414,7 @@ cdef class Partition:
 
     @property
     def max_memory_per_node(self):
-        return _get_memory(self.ptr.max_mem_per_cpu, per_cpu=False)
+        return slurmctld._get_memory(self.ptr.max_mem_per_cpu, per_cpu=False)
 
     @max_memory_per_node.setter
     def max_memory_per_node(self, val):
@@ -825,21 +826,3 @@ cdef _concat_job_default_str(typ, val, char **job_defaults_str):
         current.update({typ : _val})
 
     cstr.from_dict(job_defaults_str, current)
-
-
-def _get_memory(value, per_cpu):
-    if value != slurm.NO_VAL64:
-        if value & slurm.MEM_PER_CPU and per_cpu:
-            if value == slurm.MEM_PER_CPU:
-                return UNLIMITED
-            return u64_parse(value & (~slurm.MEM_PER_CPU))
-
-        # For these values, Slurm interprets 0 as being equal to
-        # INFINITE/UNLIMITED
-        elif value == 0 and not per_cpu:
-            return UNLIMITED
-
-        elif not value & slurm.MEM_PER_CPU and not per_cpu:
-            return u64_parse(value)
-
-    return None

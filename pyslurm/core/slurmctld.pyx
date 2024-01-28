@@ -1,7 +1,7 @@
 #########################################################################
 # slurmctld.pyx - pyslurm slurmctld api
 #########################################################################
-# Copyright (C) 2023 Toni Harzendorf <toni.harzendorf@gmail.com>
+# Copyright (C) 2024 Toni Harzendorf <toni.harzendorf@gmail.com>
 #
 # This file is part of PySlurm
 #
@@ -26,7 +26,6 @@ from pyslurm.core.error import verify_rpc, RPCError
 from pyslurm.utils.uint import *
 from pyslurm.utils.ctime import _raw_time
 from pyslurm.core.job.util import cpu_freq_int_to_str
-from pyslurm.core.partition import _get_memory
 from pyslurm.utils.helpers import instance_to_dict
 from pyslurm.utils import cstr
 
@@ -89,6 +88,10 @@ cdef class Config:
         return cstr.to_list(self.ptr.accounting_storage_ext_host)
 
     @property
+    def accounting_storage_host(self):
+        return cstr.to_list(self.ptr.accounting_storage_host)
+
+    @property
     def accounting_storage_parameters(self):
         return cstr.to_dict(self.ptr.accounting_storage_params)
 
@@ -108,7 +111,7 @@ cdef class Config:
     def accounting_storage_user(self):
         return cstr.to_unicode(self.ptr.accounting_storage_user)
 
-    # void *acct_gather_conf put into own class?
+    # TODO: void *acct_gather_conf put into own class?
 
     @property
     def accounting_gather_energy_type(self):
@@ -136,14 +139,14 @@ cdef class Config:
         return cstr.to_list(self.ptr.authalttypes)
 
     @property
-    def auth_alt_params(self):
-        # ?
-        pass
-
-    @property
     def auth_info(self):
         # ?
         return cstr.to_list(self.ptr.authinfo)
+
+    @property
+    def auth_alt_params(self):
+        # ?
+        return cstr.to_list(self.ptr.authalt_params)
 
     @property
     def auth_type(self):
@@ -292,7 +295,7 @@ cdef class Config:
     def default_gpu_frequency(self):
         return cstr.to_unicode(self.ptr.gpu_freq_def)
 
-    # hash_val
+    # TODO: hash_val
 
     @property
     def health_check_interval(self):
@@ -328,7 +331,7 @@ cdef class Config:
     def job_accounting_gather_parameters(self):
         return cstr.to_list(self.ptr.job_acct_gather_params)
 
-    # job_acct_oom_kill
+    # TODO: job_acct_oom_kill
 
     @property
     def job_completion_host(self):
@@ -355,18 +358,12 @@ cdef class Config:
         return cstr.to_unicode(self.ptr.job_comp_type)
 
     @property
+    def job_completion_user(self):
+        return cstr.to_unicode(self.ptr.job_comp_user)
+
+    @property
     def job_container_type(self):
         return cstr.to_unicode(self.ptr.job_container_plugin)
-
-    @property
-    def job_credential_private_key(self):
-        # TODO: Report as missing from slurm.conf docs
-        return cstr.to_unicode(self.ptr.job_credential_private_key)
-
-    @property
-    def job_credential_public_certificate(self):
-        # TODO: Report as missing from slurm.conf docs
-        return cstr.to_unicode(self.ptr.job_credential_public_certificate)
 
 #    @property
 #    def default_cpus_per_gpu(self):
@@ -383,6 +380,18 @@ cdef class Config:
     @property
     def job_submit_plugins(self):
         return cstr.to_list(self.ptr.job_submit_plugins)
+
+    @property
+    def keepalive_interval(self):
+        return u32_parse(self.ptr.keepalive_interval)
+
+    @property
+    def keepalive_probes(self):
+        return u32_parse(self.ptr.keepalive_probes)
+
+    @property
+    def keepalive_time(self):
+        return u32_parse(self.ptr.keepalive_time)
 
     @property
     def kill_on_bad_exit(self):
@@ -404,7 +413,7 @@ cdef class Config:
 
     @property
     def log_time_format(self):
-        return _log_fmt_int_to_str(self.ptr.log_fmt) 
+        return _log_fmt_int_to_str(self.ptr.log_fmt)
 
     @property
     def mail_domain(self):
@@ -479,8 +488,8 @@ cdef class Config:
     @property
     def message_timeout(self):
         return u16_parse(self.ptr.msg_timeout)
-    
-    # u32 next_job_id
+
+    # TODO: u32 next_job_id
 
     # TODO: void *node_features_conf put into own class?
 
@@ -488,7 +497,7 @@ cdef class Config:
     def node_features_plugins(self):
         return cstr.to_list(self.ptr.node_features_plugins)
 
-    # node_prefix
+    # TODO: node_prefix
 
     @property
     def over_time_limit(self):
@@ -556,7 +565,7 @@ cdef class Config:
         return cstr.to_unicode(self.ptr.priority_params)
 
     @property
-    def prioity_usage_reset_period(self):
+    def priority_usage_reset_period(self):
         return _priority_reset_int_to_str(self.ptr.priority_reset_period)
 
     @property
@@ -627,7 +636,7 @@ cdef class Config:
     @property
     def propagate_resource_limits_except(self):
         return cstr.to_list(self.ptr.propagate_rlimits_except)
-    
+
     @property
     def reboot_program(self):
         return cstr.to_unicode(self.ptr.reboot_program)
@@ -678,17 +687,13 @@ cdef class Config:
         return u16_parse(self.ptr.ret2service, zero_is_noval=False)
 
     @property
-    def route_plugin(self):
-        return cstr.to_unicode(self.ptr.route_plugin)
-
-    @property
     def scheduler_log_file(self):
         return cstr.to_unicode(self.ptr.sched_logfile)
 
     @property
     def scheduler_log_level(self):
         return u16_parse(self.ptr.sched_log_level, zero_is_noval=False)
-    
+
     @property
     def scheduler_parameters(self):
         return cstr.to_list(self.ptr.sched_params)
@@ -724,20 +729,24 @@ cdef class Config:
         return cstr.to_unicode(self.ptr.site_factor_params)
 
     @property
-    def slurm_user_name(self):
-        return cstr.to_unicode(self.ptr.slurm_user_name)
+    def slurm_conf_path(self):
+        return cstr.to_unicode(self.ptr.slurm_conf)
 
     @property
     def slurm_user_id(self):
         return self.ptr.slurm_user_id
 
     @property
-    def slurmd_user_name(self):
-        return cstr.to_unicode(self.ptr.slurmd_user_name)
+    def slurm_user_name(self):
+        return cstr.to_unicode(self.ptr.slurm_user_name)
 
     @property
     def slurmd_user_id(self):
         return self.ptr.slurm_user_id
+
+    @property
+    def slurmd_user_name(self):
+        return cstr.to_unicode(self.ptr.slurmd_user_name)
 
     # TODO: char *slurmctld_addr
 
@@ -761,7 +770,7 @@ cdef class Config:
             # number of ports in use that slurm conf reports for slurmctld
             last_port = port + self.ptr.slurmctld_port_count - 1
             port = f"{port}-{last_port}"
-        
+
         return str(port)
 
     @property
@@ -864,7 +873,7 @@ cdef class Config:
 
     @property
     def suspend_timeout(self):
-        return u32_parse(self.ptr.suspend_timeout)
+        return u16_parse(self.ptr.suspend_timeout)
 
     @property
     def switch_type(self):
@@ -885,7 +894,7 @@ cdef class Config:
 #    @property
 #    def task_plugin_parameters(self):
 #        TODO: slurm_sprint_cpu_bind_type
-#        return 
+#        return
 
     @property
     def task_prolog(self):
@@ -1163,4 +1172,22 @@ def _reconfig_flags_int_to_list(flags):
 
 def _log_level_int_to_str(flags):
     # TODO
+    return None
+
+
+def _get_memory(value, per_cpu):
+    if value != slurm.NO_VAL64:
+        if value & slurm.MEM_PER_CPU and per_cpu:
+            if value == slurm.MEM_PER_CPU:
+                return UNLIMITED
+            return u64_parse(value & (~slurm.MEM_PER_CPU))
+
+        # For these values, Slurm interprets 0 as being equal to
+        # INFINITE/UNLIMITED
+        elif value == 0 and not per_cpu:
+            return UNLIMITED
+
+        elif not value & slurm.MEM_PER_CPU and not per_cpu:
+            return u64_parse(value)
+
     return None
