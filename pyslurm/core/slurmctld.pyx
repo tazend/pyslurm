@@ -215,7 +215,8 @@ cdef class Config:
 
     @property
     def debug_flags(self):
-        return _debug_flags_int_to_list(self.ptr.debug_flags)
+        cdef char *data = slurm.debug_flags2str(self.ptr.slurmctld_debug)
+        return cstr.to_list_free(&data)
 
     @property
     def default_memory_per_cpu(self):
@@ -236,7 +237,9 @@ cdef class Config:
 
     @property
     def enforce_partition_limits(self):
-        return _enforce_part_limits_int_to_str(self.ptr.enforce_part_limits)
+        cdef char* data = slurm.parse_part_enforce_type_2str(
+                self.ptr.enforce_part_limits)
+        return cstr.to_unicode(data)
 
     @property
     def epilog(self):
@@ -303,8 +306,9 @@ cdef class Config:
 
     @property
     def health_check_node_state(self):
-        return _health_check_node_state_int_to_list(
+        cdef char *data = slurm.health_check_node_state_str(
                 self.ptr.health_check_node_state)
+        return cstr.to_list_free(&data)
 
     @property
     def health_check_program(self):
@@ -553,7 +557,8 @@ cdef class Config:
 
     @property
     def priority_flags(self):
-        return _priority_flags_int_to_list(self.ptr.priority_flags)
+        cdef char *data = slurm.priority_flags_string(self.ptr.priority_flags)
+        return cstr.to_list_free(&data)
 
     @property
     def priortiy_max_age(self):
@@ -602,7 +607,13 @@ cdef class Config:
 
     @property
     def private_data(self):
-        return _private_data_int_to_list(self.ptr.private_data)
+        cdef char tmp[256]
+        slurm.slurm_private_data_string(self.ptr.private_data, tmp, sizeof(tmp))
+
+        if cstr.to_unicode(tmp) == "none":
+            return []
+        else:
+            return cstr.to_list(tmp)
 
     @property
     def proctrack_type(self):
@@ -627,7 +638,8 @@ cdef class Config:
 
     @property
     def prolog_flags(self):
-        return _prolog_flags_int_to_list(self.ptr.prolog_flags)
+        cdef char *data = slurm.prolog_flags2str(self.ptr.prolog_flags)
+        return cstr.to_list_free(&data)
 
     @property
     def propagate_resource_limits(self):
@@ -643,7 +655,8 @@ cdef class Config:
 
     @property
     def reconfig_flags(self):
-        return _reconfig_flags_int_to_list(self.ptr.reconfig_flags)
+        cdef char *data = slurm.prolog_flags2str(self.ptr.reconfig_flags)
+        return cstr.to_list_free(&data)
 
     @property
     def requeue_exit(self):
@@ -948,180 +961,9 @@ cdef class Config:
 # Maybe at some point we can just use libslurmfull instead of having to
 # implement these parser functions ourselves.
 
-# https://github.com/SchedMD/slurm/blob/01a3aac7c59c9b32a9dd4e395aa5a97a8aea4f08/slurm/slurm.h#L2661
-# Keep order and naming scheme in sync with:
-# https://slurm.schedmd.com/slurm.conf.html#OPT_DebugFlags
-def _debug_flags_int_to_list(flags):
-    out = []
-
-    if (flags & slurm.DEBUG_FLAG_ACCRUE):
-        out.append('Accrue')
-
-    if (flags & slurm.DEBUG_FLAG_AGENT):
-        out.append('Agent')
-
-    if (flags & slurm.DEBUG_FLAG_BACKFILL):
-        out.append('Backfill')
-
-    if (flags & slurm.DEBUG_FLAG_BACKFILL_MAP):
-        out.append('BackfillMap')
-
-    if (flags & slurm.DEBUG_FLAG_BURST_BUF):
-        out.append('BurstBuffer')
-
-    if (flags & slurm.DEBUG_FLAG_CGROUP):
-        out.append('Cgroup')
-
-    if (flags & slurm.DEBUG_FLAG_CPU_BIND):
-        out.append('CPU_Bind')
-
-    if (flags & slurm.DEBUG_FLAG_CPU_FREQ):
-        out.append('CpuFrequency')
-
-    if (flags & slurm.DEBUG_FLAG_DATA):
-        out.append('Data')
-
-    if (flags & slurm.DEBUG_FLAG_DEPENDENCY):
-        out.append('Dependency')
-
-    if (flags & slurm.DEBUG_FLAG_ENERGY):
-        out.append('Energy')
-
-    if (flags & slurm.DEBUG_FLAG_EXT_SENSORS):
-        out.append('ExtSensors')
-
-    if (flags & slurm.DEBUG_FLAG_FEDR):
-        out.append('Federation')
-
-    if (flags & slurm.DEBUG_FLAG_FRONT_END):
-        out.append('FrontEnd')
-
-    if (flags & slurm.DEBUG_FLAG_GRES):
-        out.append('Gres')
-
-    if (flags & slurm.DEBUG_FLAG_HETJOB):
-        out.append('Hetjob')
-
-    if (flags & slurm.DEBUG_FLAG_INTERCONNECT):
-        out.append('Interconnect')
-
-    if (flags & slurm.DEBUG_FLAG_GANG):
-        out.append('Gang')
-
-    if (flags & slurm.DEBUG_FLAG_JAG):
-        out.append('JobAccountGather')
-
-    if (flags & slurm.DEBUG_FLAG_JOBCOMP):
-        out.append('JobComp')
-
-    if (flags & slurm.DEBUG_FLAG_JOB_CONT):
-        out.append('JobContainer')
-
-    if (flags & slurm.DEBUG_FLAG_LICENSE):
-        out.append('License')
-
-    if (flags & slurm.DEBUG_FLAG_MPI):
-        out.append('MPI')
-
-    if (flags & slurm.DEBUG_FLAG_NET):
-        out.append('Network')
-
-    if (flags & slurm.DEBUG_FLAG_NET_RAW):
-        out.append('NetworkRaw')
-
-    if (flags & slurm.DEBUG_FLAG_NODE_FEATURES):
-        out.append('NodeFeatures')
-
-    if (flags & slurm.DEBUG_FLAG_NO_CONF_HASH):
-        out.append('NO_CONF_HASH')
-
-    if (flags & slurm.DEBUG_FLAG_POWER):
-        out.append('Power')
-
-    if (flags & slurm.DEBUG_FLAG_PRIO):
-        out.append('Priority')
-
-    if (flags & slurm.DEBUG_FLAG_PROFILE):
-        out.append('Profile')
-
-    if (flags & slurm.DEBUG_FLAG_PROTOCOL):
-        out.append('Protocol')
-
-    if (flags & slurm.DEBUG_FLAG_RESERVATION):
-        out.append('Reservation')
-
-    if (flags & slurm.DEBUG_FLAG_ROUTE):
-        out.append('Route')
-
-    if (flags & slurm.DEBUG_FLAG_SCRIPT):
-        out.append('Script')
-
-    if (flags & slurm.DEBUG_FLAG_SELECT_TYPE):
-        out.append('SelectType')
-
-    if (flags & slurm.DEBUG_FLAG_STEPS):
-        out.append('Steps')
-
-    if (flags & slurm.DEBUG_FLAG_SWITCH):
-        out.append('Switch')
-
-    if (flags & slurm.DEBUG_FLAG_TIME_CRAY):
-        out.append('TimeCray')
-
-    if (flags & slurm.DEBUG_FLAG_TRACE_JOBS):
-        out.append('TraceJobs')
-
-    if (flags & slurm.DEBUG_FLAG_TRIGGERS):
-        out.append('Triggers')
-
-    if (flags & slurm.DEBUG_FLAG_WORKQ):
-        out.append('WorkQueue')
-
-    return out
-
 
 def _debug_flags_str_to_int(flags):
     pass
-
-
-# https://github.com/SchedMD/slurm/blob/01a3aac7c59c9b32a9dd4e395aa5a97a8aea4f08/slurm/slurm.h#L621
-def _enforce_part_limits_int_to_str(limits):
-    if limits == slurm.PARTITION_ENFORCE_NONE:
-        return "NONE"
-    elif limits == slurm.PARTITION_ENFORCE_ALL:
-        return "ALL"
-    elif limits == slurm.PARTITION_ENFORCE_ANY:
-        return "ANY"
-
-    return None
-
-
-# https://github.com/SchedMD/slurm/blob/01a3aac7c59c9b32a9dd4e395aa5a97a8aea4f08/slurm/slurm.h#L2741
-def _health_check_node_state_int_to_list(state):
-    out = []
-
-    if state & slurm.HEALTH_CHECK_CYCLE:
-        # Can be combined with states according to slurm conf docs
-        out.append("CYCLE")
-
-    if state & slurm.HEALTH_CHECK_NODE_ANY:
-        # Can't be combined with the other states, since it includes them all.
-        out.append("ANY")
-        return out
-
-    if state & slurm.HEALTH_CHECK_NODE_IDLE:
-        out.append("IDLE")
-
-    if state & slurm.HEALTH_CHECK_NODE_ALLOC:
-        out.append("MIXED")
-
-    if state & slurm.HEALTH_CHECK_NODE_MIXED:
-        out.append("MIXED")
-
-    if state & slurm.HEALTH_CHECK_NODE_NONDRAINED_IDLE:
-        out.append("NONDRAINED_IDLE")
-
-    return out
 
 
 def _log_fmt_int_to_str(flag):
@@ -1145,45 +987,6 @@ def _log_fmt_int_to_str(flag):
         return None
 
 
-def _priority_flags_int_to_list(flags):
-    out = []
-
-    if flags & slurm.PRIORITY_FLAGS_ACCRUE_ALWAYS:
-        out.append("ACCRUE_ALWAYS")
-
-    if flags & slurm.PRIORITY_FLAGS_CALCULATE_RUNNING:
-        out.append("CALCULATE_RUNNING")
-
-    if flags & slurm.PRIORITY_FLAGS_DEPTH_OBLIVIOUS:
-        out.append("DEPTH_OBLIVIOUS")
-
-    if flags & slurm.PRIORITY_FLAGS_FAIR_TREE:
-        out.append("NO_FAIR_TREE")
-
-    if flags & slurm.PRIORITY_FLAGS_INCR_ONLY:
-        out.append("INCR_ONLY")
-
-    if flags & slurm.PRIORITY_FLAGS_MAX_TRES:
-        out.append("MAX_TRES")
-
-    if flags & slurm.PRIORITY_FLAGS_NO_NORMAL_ASSOC:
-        out.append("NO_NORMAL_ASSOC")
-
-    if flags & slurm.PRIORITY_FLAGS_NO_NORMAL_PART:
-        out.append("NO_NORMAL_PART")
-
-    if flags & slurm.PRIORITY_FLAGS_NO_NORMAL_QOS:
-        out.append("NO_NORMAL_QOS")
-
-    if flags & slurm.PRIORITY_FLAGS_NO_NORMAL_TRES:
-        out.append("NO_NORMAL_TRES")
-
-    if flags & slurm.PRIORITY_FLAGS_SIZE_RELATIVE:
-        out.append("SMALL_RELATIVE_TO_TIME")
-
-    return out
-
-
 def _priority_reset_int_to_str(flag):
     if flag == slurm.PRIORITY_RESET_NONE:
         return "NONE"
@@ -1201,41 +1004,6 @@ def _priority_reset_int_to_str(flag):
         return "YEARLY"
     else:
         return None
-
-
-def _private_data_int_to_list(flags):
-    out = []
-
-    if flags & slurm.PRIVATE_DATA_ACCOUNTS:
-        out.append("accounts")
-
-    if flags & slurm.PRIVATE_DATA_EVENTS:
-        out.append("events")
-
-    if flags & slurm.PRIVATE_DATA_JOBS:
-        out.append("jobs")
-
-    if flags & slurm.PRIVATE_DATA_NODES:
-        out.append("nodes")
-
-    if flags & slurm.PRIVATE_DATA_PARTITIONS:
-        out.append("partitions")
-
-    if flags & slurm.PRIVATE_DATA_RESERVATIONS:
-        out.append("reservations")
-
-    if flags & slurm.PRIVATE_DATA_USAGE:
-        out.append("usage")
-
-    if flags & slurm.PRIVATE_DATA_USERS:
-        out.append("users")
-
-    return out
-
-
-def _prolog_flags_int_to_list(flags):
-    # TODO
-    return []
 
 
 def _reconfig_flags_int_to_list(flags):

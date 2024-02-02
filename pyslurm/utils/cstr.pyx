@@ -106,6 +106,12 @@ cpdef list to_list(char *str_list, default=[]):
     return ret.split(",")
 
 
+cdef list to_list_free(char **str_list):
+    out = to_list(str_list[0])
+    xfree(str_list[0])
+    return out
+
+
 def list_to_str(vals, delim=","):
     """Convert list to a C-String."""
     cdef object final = vals

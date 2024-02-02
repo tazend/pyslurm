@@ -4,10 +4,11 @@ pyslurm is a wrapper around the Slurm C-API.
 """
 from __future__ import absolute_import
 
-import ctypes
 import sys
+import os
 
-sys.setdlopenflags(sys.getdlopenflags() | ctypes.RTLD_GLOBAL)
+__dlopenflags = os.RTLD_GLOBAL | os.RTLD_DEEPBIND
+sys.setdlopenflags(sys.getdlopenflags() | __dlopenflags)
 
 # Initialize slurm api
 from pyslurm.api import slurm_init, slurm_fini
