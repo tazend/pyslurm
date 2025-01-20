@@ -1337,14 +1337,23 @@ cdef class Job:
             uint32_t threads
             dict output = {}
 
+        print(f"Job: {self.id} is in State: {self.state}")
+
         if not resources or not resources.core_bitmap:
+            if not resources:
+                print("job_resources are NULL")
+            elif resources and not resources.core_bitmap:
+                print("we have resources, but core_bitmap is NULL")
+
             return output
 
         hl = slurm.slurm_hostlist_create(resources.nodes)
         if not hl:
             raise ValueError("Unable to create hostlist.")
 
+        print(f"resources.nhosts: {resources.nhosts}")
         for rel_node_inx in range(resources.nhosts):
+            print(f"rel_node_inx is {rel_node_inx}")
             # Check how many consecutive nodes have the same cpu allocation
             # layout.
             if sock_reps >= resources.sock_core_rep_count[sock_inx]:
@@ -1390,15 +1399,19 @@ cdef class Job:
                 mem = u64_parse(resources.memory_allocated[rel_node_inx])
 
             if nodename:
+                print(f"We got a Node: {nodename}")
                 output[nodename] = {
                     "cpu_ids": cpu_ids,
                     "gres":    cstr.to_gres_dict(gres),
                     "memory":  mem,
                 }
+            else:
+                print(f"Node is not set: {nodename}")
 
             free(host)
 
         slurm.slurm_hostlist_destroy(hl)
+        print("Before returning")
         return output
 
 
