@@ -153,8 +153,8 @@ cdef class TrackableResources(dict):
             TrackableResources out = TrackableResources()
             TrackableResource tres
             Connection conn
-            SlurmList tres_data 
-            SlurmListItem tres_ptr 
+            SlurmList tres_data
+            SlurmListItem tres_ptr
             TrackableResourceFilter db_filter = TrackableResourceFilter()
 
         # Prepare SQL Filter

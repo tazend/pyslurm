@@ -1,7 +1,7 @@
 #########################################################################
-# assoc.pxd - pyslurm slurmdbd association api
+# user.pxd - pyslurm slurmdbd user api
 #########################################################################
-# Copyright (C) 2023 Toni Harzendorf <toni.harzendorf@gmail.com>
+# Copyright (C) 2025 Toni Harzendorf <toni.harzendorf@gmail.com>
 #
 # This file is part of PySlurm
 #
@@ -22,15 +22,17 @@
 # cython: c_string_type=unicode, c_string_encoding=default
 # cython: language_level=3
 
+from libc.string cimport memcpy, memset
 from pyslurm cimport slurm
 from pyslurm.slurm cimport (
+    slurmdb_user_rec_t,
     slurmdb_assoc_rec_t,
     slurmdb_assoc_cond_t,
-    slurmdb_associations_get,
-    slurmdb_destroy_assoc_rec,
-    slurmdb_destroy_assoc_cond,
-    slurmdb_init_assoc_rec,
-    slurmdb_associations_modify,
+    slurmdb_user_cond_t,
+    slurmdb_users_get,
+    slurmdb_users_modify,
+    slurmdb_destroy_user_rec,
+    slurmdb_destroy_user_cond,
     try_xmalloc,
 )
 from pyslurm.db.util cimport (
@@ -47,48 +49,39 @@ from pyslurm.db.tres cimport (
 )
 from pyslurm.db.connection cimport Connection
 from pyslurm.utils cimport cstr
-from pyslurm.utils.uint cimport *
 from pyslurm.db.qos cimport QualitiesOfService, _set_qos_list
+from pyslurm.db.assoc cimport Associations, Association, _parse_assoc_ptr, AssociationFilter
 from pyslurm.xcollections cimport MultiClusterMap
-
-cdef _parse_assoc_ptr(Association ass)
-cdef _create_assoc_ptr(Association ass, conn=*)
+from pyslurm.utils.uint cimport u16_set_bool_flag
 
 
-cdef class Associations(MultiClusterMap):
+cdef class Users(MultiClusterMap):
     pass
 
 
-cdef class AssociationFilter:
-    cdef slurmdb_assoc_cond_t *ptr
+cdef class UserFilter:
+    cdef slurmdb_user_cond_t *ptr
 
     cdef public:
-        users
-        ids
-        accounts
-        parent_accounts
-        clusters
-        partitions
-        qos
+        names
+        with_assocs
+        with_coordinators
+        with_wckeys
+        with_deleted
+        associations
 
 
-cdef class Association:
+cdef class User:
     cdef:
-        slurmdb_assoc_rec_t *ptr
-        slurmdb_assoc_rec_t *umsg
-        QualitiesOfService qos_data
-        TrackableResources tres_data
+        slurmdb_user_rec_t *ptr
+
+    cdef readonly:
+        cluster
 
     cdef public:
-        group_tres
-        group_tres_mins
-        group_tres_run_mins
-        max_tres_mins_per_job
-        max_tres_run_mins_per_user
-        max_tres_per_job
-        max_tres_per_node
-        qos
+        associations
+        coordinators
+        wckeys
 
     @staticmethod
-    cdef Association from_ptr(slurmdb_assoc_rec_t *in_ptr)
-
+    cdef User from_ptr(slurmdb_user_rec_t *in_ptr)

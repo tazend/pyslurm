@@ -54,15 +54,11 @@ cdef class Associations(MultiClusterMap):
             QualitiesOfService qos_data
             TrackableResources tres_data
 
-        # Prepare SQL Filter
         if not db_filter:
             cond = AssociationFilter()
         cond._create()
 
-        # Setup DB Conn
         conn = _open_conn_or_error(db_connection)
-
-        # Fetch Assoc Data
         assoc_data = SlurmList.wrap(slurmdb_associations_get(
             conn.ptr, cond.ptr))
 
@@ -76,7 +72,6 @@ cdef class Associations(MultiClusterMap):
         tres_data = TrackableResources.load(db_connection=conn,
                                             name_is_key=False)
 
-        # Setup Association objects
         for assoc_ptr in SlurmList.iter_and_pop(assoc_data):
             assoc = Association.from_ptr(<slurmdb_assoc_rec_t*>assoc_ptr.data)
             assoc.qos_data = qos_data
@@ -98,6 +93,8 @@ cdef class Associations(MultiClusterMap):
             SlurmList response
             SlurmListItem response_ptr
             list out = []
+
+        # TODO: make db_filter optional?
 
         # Prepare SQL Filter
         if isinstance(db_filter, Associations):
@@ -175,6 +172,13 @@ cdef class AssociationFilter:
         cdef slurmdb_assoc_cond_t *ptr = self.ptr
 
         make_char_list(&ptr.user_list, self.users)
+        make_char_list(&ptr.user_list, self.ids)
+        make_char_list(&ptr.acct_list, self.accounts)
+        make_char_list(&ptr.parent_acct_list, self.parent_accounts)
+        make_char_list(&ptr.cluster_list, self.clusters)
+        make_char_list(&ptr.partition_list, self.partitions)
+        # TODO: These are QOS ids, not names
+        make_char_list(&ptr.qos_list, self.qos)
 
 
 cdef class Association:
@@ -300,10 +304,6 @@ cdef class Association:
         return u16_parse_bool(self.ptr.is_def)
 
     @property
-    def lft(self):
-        return u32_parse(self.ptr.lft)
-
-    @property
     def max_jobs(self):
         return u32_parse(self.ptr.max_jobs, zero_is_noval=False)
 
@@ -366,10 +366,6 @@ cdef class Association:
     @priority.setter
     def priority(self, val):
         self.ptr.priority = u32(val)
-
-    @property
-    def rgt(self):
-        return u32_parse(self.ptr.rgt)
 
     @property
     def shares(self):
