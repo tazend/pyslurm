@@ -340,6 +340,9 @@ cdef class Reservation:
     @cpus.setter
     def cpus(self, val):
         self.info.core_cnt = self.umsg.core_cnt = int(val)
+        current_tres = self.tres
+        current_tres["cpu"] = int(val)
+        self.tres = current_tres
 
     @property
     def cpu_ids_by_node(self):
@@ -410,6 +413,9 @@ cdef class Reservation:
     @node_count.setter
     def node_count(self, val):
         self.info.node_cnt = self.umsg.node_cnt = int(val)
+        current_tres = self.tres
+        current_tres["node"] = int(val)
+        self.tres = current_tres
 
     @property
     def nodes(self):
@@ -477,6 +483,13 @@ cdef class Reservation:
     def tres(self, val):
         cstr.fmalloc2(&self.info.tres_str, &self.umsg.tres_str,
                       cstr.dict_to_str(val))
+        current = self.tres
+        cpus, node_count = self.tres.get("cpu"), self.tres.get("node")
+        if cpus and self.cpus != cpus:
+            self.cpus = cpus
+
+        if node_count and self.node_count != node_count:
+            self.node_count = node_count
 
     @property
     def users(self):
