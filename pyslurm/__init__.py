@@ -28,6 +28,8 @@ from pyslurm.core.reservation import (
     ReservationFlags,
     ReservationReoccurrence,
 )
+from pyslurm.core.topology import Topology
+from pyslurm.core.frontend import Frontend, Frontends
 from pyslurm.core import error
 from pyslurm.core.error import (
     PyslurmError,
