@@ -22,7 +22,7 @@
 # cython: c_string_type=unicode, c_string_encoding=default
 # cython: language_level=3
 
-from pyslurm.core.error import RPCError
+from pyslurm.core.error import RPCError, slurm_errno, verify_rpc
 from pyslurm.utils.helpers import (
     instance_to_dict,
     user_to_uid,
@@ -31,16 +31,20 @@ from pyslurm.utils.uint import *
 from pyslurm.db.connection import _open_conn_or_error
 from pyslurm import settings
 from pyslurm import xcollections
+from pyslurm.utils.enums import SlurmEnum
 
 
-cdef class Users(MultiClusterMap):
+class AdminLevel(SlurmEnum):
+    UNDEFINED     = "UNDEFINED",     slurm.SLURMDB_ADMIN_NOTSET
+    NONE          = "NONE",          slurm.SLURMDB_ADMIN_NONE
+    OPERATOR      = "OPERATOR",      slurm.SLURMDB_ADMIN_OPERATOR
+    ADMINISTRATOR = "ADMINISTRATOR", slurm.SLURMDB_ADMIN_SUPER_USER
 
-    def __init__(self, users=None):
-        super().__init__(data=users,
-                         typ="Users",
-                         val_type=User,
-                         id_attr=User.name,
-                         key_type=str)
+
+cdef class Users(dict):
+
+    def __init__(self, **kwargs):
+        super().__init__(kwargs)
 
     @staticmethod
     def load(UserFilter db_filter=None, Connection db_connection=None):
@@ -79,11 +83,7 @@ cdef class Users(MultiClusterMap):
 
         for user_ptr in SlurmList.iter_and_pop(user_data):
             user = User.from_ptr(<slurmdb_user_rec_t*>user_ptr.data)
-
-            cluster = user.cluster
-            if cluster not in out.data:
-                out.data[cluster] = {}
-            out.data[cluster][user.name] = user
+            out[user.name] = user
 
             assoc_data = SlurmList.wrap(user.ptr.assoc_list, owned=False)
             for assoc_ptr in SlurmList.iter_and_pop(assoc_data):
@@ -92,6 +92,9 @@ cdef class Users(MultiClusterMap):
                 assoc.tres_data = tres_data
                 _parse_assoc_ptr(assoc)
                 user.associations.append(assoc)
+
+                if assoc.user == user.name:
+                    user.default_association = assoc
 
         return out
 
@@ -104,8 +107,7 @@ cdef class Users(MultiClusterMap):
             SlurmListItem response_ptr
             list out = []
 
-        users = [user for user in self.keys()]
-        u_filter = UserFilter(names=users)
+        u_filter = UserFilter(names=list(self.keys()))
 #        a_filter = AssociationFilter()
         conn = _open_conn_or_error(db_connection)
 
@@ -124,16 +126,38 @@ cdef class Users(MultiClusterMap):
 
         elif not response.is_null:
             # There was no real error, but simply nothing has been modified
-            raise RPCError(msg="Nothing was modified")
+            return out
         else:
             # Autodetects the last slurm error
-            raise RPCError()
+            raise RPCError(msg="Failed to modify users.")
 
         if not db_connection:
             # Autocommit if no connection was explicitly specified.
             conn.commit()
 
         return out
+
+    @staticmethod
+    def create(users, Connection db_connection=None):
+        cdef:
+            Connection conn
+            User user
+            SlurmList user_list
+            list assocs_to_add = []
+
+        user_list = SlurmList.create(slurmdb_destroy_user_rec, owned=False)
+
+        for user in users:
+            assocs_to_add.extend(user.associations)
+            slurm.slurm_list_append(user_list.info, user.ptr)
+
+        conn = _open_conn_or_error(db_connection)
+        verify_rpc(slurmdb_users_add(conn.ptr, user_list.info))
+        Associations.create(assocs_to_add, conn)
+
+        if not db_connection:
+            # Autocommit if no connection was explicitly specified.
+            conn.commit()
 
 
 cdef class UserFilter:
@@ -209,6 +233,7 @@ cdef class User:
                 raise MemoryError("xmalloc failed for slurmdb_user_rec_t")
 
             memset(self.ptr, 0, sizeof(slurmdb_user_rec_t))
+            self.ptr.uid = slurm.NO_VAL
 
     def __repr__(self):
         return f'pyslurm.db.{self.__class__.__name__}({self.name})'
@@ -247,15 +272,11 @@ cdef class User:
 
     @property
     def user_id(self):
-        return self.ptr.uid
+        return u32_parse(self.ptr.uid, zero_is_noval=False)
 
     @property
     def default_account(self):
         return cstr.to_unicode(self.ptr.default_acct)
-
-    @default_account.setter
-    def default_account(self, val):
-        cstr.fmalloc(&self.ptr.default_acct, val)
 
     @property
     def default_wckey(self):
@@ -269,11 +290,9 @@ cdef class User:
 
     @property
     def admin_level(self):
-        if self.ptr.admin_level == slurm.SLURMDB_ADMIN_NONE or self.ptr.admin_level == slurm.SLURMDB_ADMIN_NOTSET:
-            return None
-        elif self.ptr.admin_level == slurm.SLURMDB_ADMIN_OPERATOR:
-            return "OPERATOR"
-        elif self.ptr.admin_level == slurm.SLURMDB_ADMIN_SUPER_USER:
-            return "ADMINISTRATOR"
+        return AdminLevel.from_flag(self.ptr.admin_level,
+                                    default=AdminLevel.UNDEFINED)
 
-    # TODO: provide default association
+    @admin_level.setter
+    def admin_level(self, val):
+        self.ptr.admin_level = AdminLevel(val)._flag

@@ -31,6 +31,7 @@ from pyslurm.slurm cimport (
     slurmdb_destroy_assoc_cond,
     slurmdb_init_assoc_rec,
     slurmdb_associations_modify,
+    slurmdb_associations_add,
     try_xmalloc,
 )
 from pyslurm.db.util cimport (
@@ -78,6 +79,7 @@ cdef class Association:
         slurmdb_assoc_rec_t *umsg
         QualitiesOfService qos_data
         TrackableResources tres_data
+        owned
 
     cdef public:
         group_tres
@@ -88,7 +90,11 @@ cdef class Association:
         max_tres_per_job
         max_tres_per_node
         qos
+        default_qos
 
     @staticmethod
     cdef Association from_ptr(slurmdb_assoc_rec_t *in_ptr)
 
+
+cdef class AssociationList(SlurmList):
+    pass

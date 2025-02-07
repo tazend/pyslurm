@@ -30,6 +30,8 @@ from pyslurm.slurm cimport (
     slurmdb_assoc_cond_t,
     slurmdb_user_cond_t,
     slurmdb_users_get,
+    slurmdb_users_add,
+    slurmdb_associations_add,
     slurmdb_users_modify,
     slurmdb_destroy_user_rec,
     slurmdb_destroy_user_cond,
@@ -50,13 +52,17 @@ from pyslurm.db.tres cimport (
 from pyslurm.db.connection cimport Connection
 from pyslurm.utils cimport cstr
 from pyslurm.db.qos cimport QualitiesOfService, _set_qos_list
-from pyslurm.db.assoc cimport Associations, Association, _parse_assoc_ptr, AssociationFilter
+from pyslurm.db.assoc cimport Associations, Association, _parse_assoc_ptr, AssociationFilter, AssociationList
 from pyslurm.xcollections cimport MultiClusterMap
 from pyslurm.utils.uint cimport u16_set_bool_flag
 
 
-cdef class Users(MultiClusterMap):
+cdef class Users(dict):
     pass
+
+
+#   cdef class UserAddRequest:
+#       cdef slurmdb_add_assoc_cond_t *ptr
 
 
 cdef class UserFilter:
@@ -82,6 +88,7 @@ cdef class User:
         associations
         coordinators
         wckeys
+        default_association
 
     @staticmethod
     cdef User from_ptr(slurmdb_user_rec_t *in_ptr)

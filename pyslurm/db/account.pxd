@@ -30,6 +30,7 @@ from pyslurm.slurm cimport (
     slurmdb_assoc_cond_t,
     slurmdb_account_cond_t,
     slurmdb_accounts_get,
+    slurmdb_accounts_add,
     slurmdb_destroy_account_rec,
     slurmdb_destroy_account_cond,
     try_xmalloc,
@@ -54,7 +55,7 @@ from pyslurm.xcollections cimport MultiClusterMap
 from pyslurm.utils.uint cimport u16_set_bool_flag
 
 
-cdef class Accounts(MultiClusterMap):
+cdef class Accounts(dict):
     pass
 
 
@@ -80,6 +81,7 @@ cdef class Account:
     cdef public:
         associations
         coordinators
+        association
 
     @staticmethod
     cdef Account from_ptr(slurmdb_account_rec_t *in_ptr)

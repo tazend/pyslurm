@@ -22,7 +22,7 @@
 # cython: c_string_type=unicode, c_string_encoding=default
 # cython: language_level=3
 
-from pyslurm.core.error import RPCError
+from pyslurm.core.error import RPCError, verify_rpc
 from pyslurm.utils.helpers import (
     instance_to_dict,
     user_to_uid,
@@ -33,14 +33,10 @@ from pyslurm import settings
 from pyslurm import xcollections
 
 
-cdef class Accounts(MultiClusterMap):
+cdef class Accounts(dict):
 
     def __init__(self, accounts=None):
-        super().__init__(data=accounts,
-                         typ="Accounts",
-                         val_type=Account,
-                         id_attr=Account.name,
-                         key_type=str)
+        super().__init__()
 
     @staticmethod
     def load(AccountFilter db_filter=None, Connection db_connection=None):
@@ -64,9 +60,7 @@ cdef class Accounts(MultiClusterMap):
             cond.with_assocs = True
 
         cond._create()
-
         conn = _open_conn_or_error(db_connection)
-
         account_data = SlurmList.wrap(slurmdb_accounts_get(conn.ptr, cond.ptr))
 
         if account_data.is_null:
@@ -79,11 +73,7 @@ cdef class Accounts(MultiClusterMap):
 
         for account_ptr in SlurmList.iter_and_pop(account_data):
             account = Account.from_ptr(<slurmdb_account_rec_t*>account_ptr.data)
-
-            cluster = account.cluster
-            if cluster not in out.data:
-                out.data[cluster] = {}
-            out.data[cluster][account.name] = account
+            out[account.name] = account
 
             assoc_data = SlurmList.wrap(account.ptr.assoc_list, owned=False)
             for assoc_ptr in SlurmList.iter_and_pop(assoc_data):
@@ -91,9 +81,37 @@ cdef class Accounts(MultiClusterMap):
                 assoc.qos_data = qos_data
                 assoc.tres_data = tres_data
                 _parse_assoc_ptr(assoc)
-                account.associations.append(assoc)
+
+                if not assoc.user:
+                    # This is the Association of the account itself.
+                    account.association = assoc
+                else:
+                    # These must be User Associations.
+                    account.associations.append(assoc)
 
         return out
+
+    @staticmethod
+    def create(accounts, Connection db_connection=None):
+        cdef:
+            Connection conn
+            Account account
+            SlurmList account_list
+            list assocs_to_add = []
+
+        account_list = SlurmList.create(slurmdb_destroy_account_rec, owned=False)
+
+        for account in accounts:
+            assocs_to_add.extend(account.associations)
+            slurm.slurm_list_append(account_list.info, account.ptr)
+
+        conn = _open_conn_or_error(db_connection)
+        verify_rpc(slurmdb_accounts_add(conn.ptr, account_list.info))
+        Associations.create(assocs_to_add, conn)
+
+        if not db_connection:
+            # Autocommit if no connection was explicitly specified.
+            conn.commit()
 
 
 cdef class AccountFilter:
@@ -198,13 +216,25 @@ cdef class Account:
     def name(self):
         return cstr.to_unicode(self.ptr.name)
 
+    @name.setter
+    def name(self, val):
+        cstr.fmalloc(&self.ptr.name, val)
+
     @property
     def description(self):
         return cstr.to_unicode(self.ptr.description)
 
+    @description.setter
+    def description(self, val):
+        cstr.fmalloc(&self.ptr.description, val)
+
     @property
     def organization(self):
         return cstr.to_unicode(self.ptr.organization)
+
+    @organization.setter
+    def organization(self, val):
+        cstr.fmalloc(&self.ptr.organization, val)
 
     @property
     def is_deleted(self):
