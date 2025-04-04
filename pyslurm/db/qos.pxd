@@ -40,7 +40,7 @@ from pyslurm.db.util cimport (
 )
 from pyslurm.db.connection cimport Connection
 from pyslurm.utils cimport cstr
-from pyslurm.utils.uint cimport u16_set_bool_flag
+from pyslurm.utils.uint cimport u16_set_bool_flag, u32, u32_parse
 
 cdef _set_qos_list(list_t **in_list, vals, QualitiesOfService data)
 

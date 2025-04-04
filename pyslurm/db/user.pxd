@@ -31,8 +31,8 @@ from pyslurm.slurm cimport (
     slurmdb_user_cond_t,
     slurmdb_users_get,
     slurmdb_users_add,
-    slurmdb_associations_add,
     slurmdb_users_modify,
+    slurmdb_users_remove,
     slurmdb_destroy_user_rec,
     slurmdb_destroy_user_cond,
     try_xmalloc,
@@ -78,16 +78,33 @@ cdef class UserFilter:
 
 
 cdef class User:
+    """Slurm Database User
+
+    Attributes:
+        name (str):
+            The name of the User.
+        previous_name (str):
+            Previous name of the User, in case it was modified before.
+        user_id (int):
+            UID of the User.
+        default_account (str):
+            Default Account of the User.
+        default_wckey (str):
+            Default WCKey for the User.
+        is_deleted (bool):
+            Whether this User has been deleted or not.
+        admin_level (pyslurm.AdminLevel):
+            Admin Level of the User.
+    """
     cdef:
         slurmdb_user_rec_t *ptr
-
-    cdef readonly:
-        cluster
 
     cdef public:
         associations
         coordinators
         wckeys
+
+    cdef readonly:
         default_association
 
     @staticmethod

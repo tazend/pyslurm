@@ -22,15 +22,15 @@
 # cython: c_string_type=unicode, c_string_encoding=default
 # cython: language_level=3
 
-from pyslurm.core.error import RPCError, verify_rpc
+from pyslurm.core.error import RPCError, verify_rpc, slurm_errno
 from pyslurm.utils.helpers import (
     instance_to_dict,
     user_to_uid,
 )
 from pyslurm.utils.uint import *
 from pyslurm.db.connection import _open_conn_or_error
-from pyslurm import settings
 from pyslurm import xcollections
+from pyslurm.db.error import DefaultAccountError, JobsRunningError
 
 
 cdef class Accounts(dict):
@@ -113,6 +113,35 @@ cdef class Accounts(dict):
             # Autocommit if no connection was explicitly specified.
             conn.commit()
 
+    def delete(self, Connection db_connection=None):
+        cdef:
+            AccountFilter a_filter
+            Connection conn
+            SlurmList response
+            list out = []
+
+
+        a_filter = AccountFilter(names=list(self.keys()))
+        a_filter._create()
+
+        conn = _open_conn_or_error(db_connection)
+        response = SlurmList.wrap(slurmdb_accounts_remove(conn.ptr, a_filter.ptr))
+        rc = slurm_errno()
+
+        if rc == slurm.SLURM_SUCCESS or rc == slurm.SLURM_NO_CHANGE_IN_DATA:
+            return
+
+#       if rc == slurm.ESLURM_ACCESS_DENIED or response.is_null:
+#           verify_rpc(rc)
+
+        # Handle the error cases.
+        if rc == slurm.ESLURM_JOBS_RUNNING_ON_ASSOC:
+            raise JobsRunningError.from_response(response, rc)
+        elif rc == slurm.ESLURM_NO_REMOVE_DEFAULT_ACCOUNT:
+            raise DefaultAccountError.from_response(response, rc)
+        else:
+            verify_rpc(rc)
+
 
 cdef class AccountFilter:
 
@@ -169,8 +198,8 @@ cdef class Account:
             setattr(self, k, v)
 
     def _init_defaults(self):
-        self.cluster = settings.LOCAL_CLUSTER
         self.associations = []
+        self.association = None
         self.coordinators = []
 
     def __dealloc__(self):
@@ -209,7 +238,7 @@ cdef class Account:
 
     def __eq__(self, other):
         if isinstance(other, Account):
-            return self.name == other.name and self.cluster == other.cluster
+            return self.name == other.name
         return NotImplemented
 
     @property
@@ -241,5 +270,3 @@ cdef class Account:
         if self.ptr.flags & slurm.SLURMDB_ACCT_FLAG_DELETED:
             return True
         return False
-
-    # TODO: extract the association of this account

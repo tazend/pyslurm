@@ -29,9 +29,9 @@ from pyslurm.utils.helpers import (
 )
 from pyslurm.utils.uint import *
 from pyslurm.db.connection import _open_conn_or_error
-from pyslurm import settings
 from pyslurm import xcollections
 from pyslurm.utils.enums import SlurmEnum
+from pyslurm.db.error import JobsRunningError
 
 
 class AdminLevel(SlurmEnum):
@@ -98,6 +98,37 @@ cdef class Users(dict):
 
         return out
 
+    def delete(self, Connection db_connection):
+        cdef:
+            UserFilter u_filter
+            Connection conn
+            SlurmList response
+            SlurmListItem response_ptr
+
+        names = list(self.keys())
+        if not names:
+            return
+
+        u_filter = UserFilter(names=names)
+        u_filter._create()
+
+        conn = _open_conn_or_error(db_connection)
+        response = SlurmList.wrap(slurmdb_users_remove(conn.ptr, u_filter.ptr))
+        rc = slurm_errno()
+
+        if rc == slurm.SLURM_SUCCESS or rc == slurm.SLURM_NO_CHANGE_IN_DATA:
+            return
+
+       #if rc == slurm.ESLURM_ACCESS_DENIED or response.is_null:
+       #    verify_rpc(rc)
+
+        # Handle the error case. Running Jobs should be the only possible error
+        # where slurmdbd sends a response list.
+        if rc == slurm.ESLURM_JOBS_RUNNING_ON_ASSOC:
+            raise JobsRunningError.from_response(response, rc)
+        else:
+            verify_rpc(rc)
+
     def modify(self, User changes, Connection db_connection=None):
         cdef:
             UserFilter u_filter
@@ -138,7 +169,7 @@ cdef class Users(dict):
         return out
 
     @staticmethod
-    def create(users, Connection db_connection=None):
+    def create(users, Connection db_connection):
         cdef:
             Connection conn
             User user
@@ -154,10 +185,6 @@ cdef class Users(dict):
         conn = _open_conn_or_error(db_connection)
         verify_rpc(slurmdb_users_add(conn.ptr, user_list.info))
         Associations.create(assocs_to_add, conn)
-
-        if not db_connection:
-            # Autocommit if no connection was explicitly specified.
-            conn.commit()
 
 
 cdef class UserFilter:
@@ -213,9 +240,9 @@ cdef class User:
             setattr(self, k, v)
 
     def _init_defaults(self):
-        self.cluster = settings.LOCAL_CLUSTER
         self.associations = []
         self.coordinators = []
+        self.default_association = None
         self.wckeys = []
 
     def __dealloc__(self):
@@ -255,8 +282,25 @@ cdef class User:
 
     def __eq__(self, other):
         if isinstance(other, User):
-            return self.name == other.name and self.cluster == other.cluster
+            return self.name == other.name
         return NotImplemented
+
+    @staticmethod
+    def load(name, Connection db_connection):
+        user = Users.load(db_connection=db_connection).get(name)
+        if not user:
+            raise RPCError(msg=f"User {name} does not exist.")
+
+        return user
+
+    def create(self, Connection db_connection):
+        Users.create([self], db_connection)
+
+    def delete(self, Connection db_connection):
+        Users({self.name: self}).delete(db_connection)
+
+    def modify(self, Connection db_connection):
+        Users({self.name: self}).modify(self, db_connection)
 
     @property
     def name(self):

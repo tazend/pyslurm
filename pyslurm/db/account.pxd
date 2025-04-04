@@ -31,6 +31,8 @@ from pyslurm.slurm cimport (
     slurmdb_account_cond_t,
     slurmdb_accounts_get,
     slurmdb_accounts_add,
+    slurmdb_accounts_remove,
+    slurmdb_accounts_modify,
     slurmdb_destroy_account_rec,
     slurmdb_destroy_account_cond,
     try_xmalloc,
@@ -72,6 +74,20 @@ cdef class AccountFilter:
 
 
 cdef class Account:
+    """Slurm Database Account.
+
+    Attributes:
+        name (str):
+            Name of the Account.
+        description (str):
+            Description of the Account.
+        organization (str):
+            Organization of the Account.
+        is_deleted (bool):
+            Whether this Account has been deleted or not.
+        association (pyslurm.db.Association):
+            This accounts association.
+    """
     cdef:
         slurmdb_account_rec_t *ptr
 

@@ -26,12 +26,13 @@ from pyslurm cimport slurm
 from pyslurm.slurm cimport (
     slurmdb_assoc_rec_t,
     slurmdb_assoc_cond_t,
-    slurmdb_associations_get,
     slurmdb_destroy_assoc_rec,
     slurmdb_destroy_assoc_cond,
     slurmdb_init_assoc_rec,
+    slurmdb_associations_get,
     slurmdb_associations_modify,
     slurmdb_associations_add,
+    slurmdb_associations_remove,
     try_xmalloc,
 )
 from pyslurm.db.util cimport (

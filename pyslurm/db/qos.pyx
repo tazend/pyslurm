@@ -203,9 +203,45 @@ cdef class QualityOfService:
     def description(self):
         return cstr.to_unicode(self.ptr.description)
 
+    @description.setter
+    def description(self, val):
+        cstr.fmalloc(&self.ptr.description, val)
+
     @property
     def id(self):
         return self.ptr.id
+
+    @property
+    def grace_time(self):
+        return u32_parse(self.ptr.grace_time)
+
+    @grace_time.setter
+    def grace_time(self, val):
+        self.ptr.grace_time = u32(val)
+
+    @property
+    def group_jobs_accrue(self):
+        return u32_parse(self.ptr.grp_jobs_accrue)
+
+    @group_jobs_accrue.setter
+    def group_jobs_accrue(self, val):
+        self.ptr.grp_jobs_accrue = u32(val)
+
+    @property
+    def group_jobs(self):
+        return u32_parse(self.ptr.grp_jobs)
+
+    @group_jobs.setter
+    def group_jobs(self, val):
+        self.ptr.grp_jobs = u32(val)
+
+    @property
+    def group_submit_jobs(self):
+        return u32_parse(self.ptr.grp_submit_jobs, zero_is_noval=False)
+
+    @group_submit_jobs.setter
+    def group_submit_jobs(self, val):
+        self.ptr.grp_submit_jobs = u32(val)
 
 
 def _qos_names_to_ids(qos_list, QualitiesOfService data):
